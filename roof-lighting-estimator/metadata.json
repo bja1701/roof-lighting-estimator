@@ -1,0 +1,5 @@
+{
+  "name": "Roof Lighting Estimator",
+  "description": "A professional geospatial tool for estimating roof lighting costs using satellite imagery, street view pitch detection, and solar data.",
+  "requestFramePermissions": []
+}
