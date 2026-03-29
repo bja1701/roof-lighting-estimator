@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
+import { useTrialStore } from '../store/useTrialStore';
 
 const SearchBar: React.FC = () => {
   // Pull both actions from the store
   const { setMapCenter, setStreetViewPosition, reset } = useEstimatorStore();
+  const { useEstimate } = useTrialStore();
   const inputRef = useRef<HTMLInputElement>(null);
   // Using 'any' for the ref type because the 'google' namespace might not be available in the global type definitions.
   const autocompleteRef = useRef<any>(null);
@@ -31,17 +33,21 @@ const SearchBar: React.FC = () => {
         if (place && place.geometry && place.geometry.location) {
           const location = place.geometry.location;
           const newLatLng = { lat: location.lat(), lng: location.lng() };
-          
+
           // 1. Update Satellite View
           setMapCenter(newLatLng);
 
           // 2. Update Street View (Pull up to the searched address)
-          // This decouples them afterwards; panning the map won't move Street View, 
+          // This decouples them afterwards; panning the map won't move Street View,
           // but the initial search puts them in the same spot.
           setStreetViewPosition(newLatLng);
-          
+
           // Reset the drawing state for the new location
           reset();
+
+          // 3. Count this as one trial estimate (dedup handled in store)
+          const address = place.formatted_address ?? `${location.lat()},${location.lng()}`;
+          useEstimate(address);
         }
       });
 

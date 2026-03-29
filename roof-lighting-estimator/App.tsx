@@ -1,22 +1,38 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useEstimatorStore } from './store/useEstimatorStore';
+import { useTrialStore } from './store/useTrialStore';
 import MapWrapper from './components/MapWrapper';
 import SatelliteCanvas from './components/SatelliteCanvas';
 import VisualPitchTool from './components/VisualPitchTool';
 import SearchBar from './components/SearchBar';
 import PricingPanel from './components/PricingPanel';
 import EditorToolbar from './components/EditorToolbar';
+import EmailGate from './components/EmailGate';
+import TrialExpired from './components/TrialExpired';
 
 const App: React.FC = () => {
   const mode = useEstimatorStore((s) => s.mode);
   const setMode = useEstimatorStore((s) => s.setMode);
   const reset = useEstimatorStore((s) => s.reset);
+  const { isGated, isLoading, estimatesUsed, loadSession } = useTrialStore();
+
+  useEffect(() => {
+    loadSession();
+  }, []);
+
+  const trialExpired = !isLoading && !isGated && estimatesUsed >= 5;
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-900 text-white font-sans overflow-hidden">
-      
-      {/* 
+
+      {/* Trial Gate — shown while loading or when no email captured */}
+      {(isLoading || isGated) && <EmailGate />}
+
+      {/* Trial Expired — shown after 5 estimates */}
+      {trialExpired && <TrialExpired />}
+
+      {/*
          MapWrapper provides the Google Maps API context.
       */}
       <MapWrapper>

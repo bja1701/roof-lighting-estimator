@@ -13,7 +13,8 @@
     "react-dom": "18.2.0",
     "zustand": "4.5.2",
     "uuid": "9.0.1",
-    "@react-google-maps/api": "2.19.2"
+    "@react-google-maps/api": "2.19.2",
+    "@supabase/supabase-js": "^2.49.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
