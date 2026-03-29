@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
 const STORAGE_KEY = 'nexusflow_trial_email';
+const STORAGE_COUNT_KEY = 'nexusflow_trial_count';
 const MAX_FREE_ESTIMATES = 5;
 
 interface TrialState {
@@ -31,7 +32,11 @@ export const useTrialStore = create<TrialState>((set, get) => ({
       return;
     }
 
-    // Fetch current count from Supabase (source of truth on load)
+    // Use cached count immediately so the app shows without waiting on Supabase
+    const cachedCount = parseInt(localStorage.getItem(STORAGE_COUNT_KEY) ?? '0', 10);
+    set({ email: savedEmail, estimatesUsed: cachedCount, isLoading: false, isGated: false });
+
+    // Sync with Supabase in the background to get the authoritative count
     try {
       const { data, error } = await supabase
         .from('trial_users')
@@ -39,22 +44,24 @@ export const useTrialStore = create<TrialState>((set, get) => ({
         .eq('email', savedEmail)
         .single();
 
-      if (error || !data) {
-        // Row missing (e.g., DB was reset) — show gate again
-        localStorage.removeItem(STORAGE_KEY);
-        set({ isLoading: false, isGated: true });
+      if (error) {
+        // Supabase unavailable or table missing — keep the cached count, stay ungated
         return;
       }
 
-      set({
-        email: savedEmail,
-        estimatesUsed: data.estimates_used,
-        isLoading: false,
-        isGated: false,
-      });
+      if (!data) {
+        // Email not in DB (e.g. DB was reset) — clear and re-gate
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_COUNT_KEY);
+        set({ email: null, estimatesUsed: 0, isGated: true });
+        return;
+      }
+
+      // Sync authoritative count from Supabase
+      localStorage.setItem(STORAGE_COUNT_KEY, String(data.estimates_used));
+      set({ estimatesUsed: data.estimates_used });
     } catch {
-      // Network error — use localStorage cache, allow access
-      set({ email: savedEmail, estimatesUsed: 0, isLoading: false, isGated: false });
+      // Network error — cached count is fine, stay ungated
     }
   },
 
@@ -70,17 +77,15 @@ export const useTrialStore = create<TrialState>((set, get) => ({
 
       if (error) throw error;
 
+      const count = data?.estimates_used ?? 0;
       localStorage.setItem(STORAGE_KEY, email);
-      set({
-        email,
-        estimatesUsed: data?.estimates_used ?? 0,
-        isLoading: false,
-        isGated: false,
-      });
+      localStorage.setItem(STORAGE_COUNT_KEY, String(count));
+      set({ email, estimatesUsed: count, isLoading: false, isGated: false });
     } catch (err) {
       console.error('[TrialGate] Error submitting email:', err);
       // Optimistic fallback — let them in, log locally
       localStorage.setItem(STORAGE_KEY, email);
+      localStorage.setItem(STORAGE_COUNT_KEY, '0');
       set({ email, estimatesUsed: 0, isLoading: false, isGated: false });
     }
   },
@@ -95,6 +100,7 @@ export const useTrialStore = create<TrialState>((set, get) => ({
     if (estimatesUsed >= MAX_FREE_ESTIMATES) return;
 
     const newCount = estimatesUsed + 1;
+    localStorage.setItem(STORAGE_COUNT_KEY, String(newCount));
     set({ estimatesUsed: newCount, lastAddress: address });
 
     try {
