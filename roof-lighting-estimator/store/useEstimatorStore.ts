@@ -67,6 +67,13 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     return id;
   },
 
+  updateNodePosition: (id, lat, lng) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) => n.id === id ? { ...n, lat, lng } : n),
+    }));
+    get().calculateTotals();
+  },
+
   removeNode: (id) => {
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),

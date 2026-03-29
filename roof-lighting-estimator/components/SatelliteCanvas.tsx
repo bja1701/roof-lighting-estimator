@@ -37,7 +37,8 @@ const SatelliteCanvas: React.FC = () => {
     selectLine,
     isSuperZoom,
     activeDrawNodeId,
-    setActiveDrawNode
+    setActiveDrawNode,
+    updateNodePosition
   } = useEstimatorStore();
 
   const [showHelper, setShowHelper] = useState(false);
@@ -129,6 +130,13 @@ const SatelliteCanvas: React.FC = () => {
         selectLine(lineId);
         // Stop bubbling so the map doesn't zoom (already disabled) or deselect
         if (e.domEvent) e.domEvent.stopPropagation();
+    }
+  };
+
+  // Node Drag End (for repositioning in Select Mode)
+  const handleNodeDragEnd = (e: any, nodeId: string) => {
+    if (e.latLng) {
+      updateNodePosition(nodeId, e.latLng.lat(), e.latLng.lng());
     }
   };
 
@@ -229,6 +237,8 @@ const SatelliteCanvas: React.FC = () => {
               key={node.id}
               position={node}
               onClick={(e) => handleNodeClick(e, node.id)}
+              draggable={selectedTool === 'select'} // Drag to reposition in select mode
+              onDragEnd={(e) => handleNodeDragEnd(e, node.id)}
               icon={{
                 path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
                 fillColor: activeDrawNodeId === node.id ? '#3b82f6' : '#ffffff',
@@ -237,8 +247,8 @@ const SatelliteCanvas: React.FC = () => {
                 strokeWeight: 1,
                 scale: selectedTool === 'draw' ? 3 : 2, // Make nodes slightly bigger in draw mode
               }}
-              clickable={selectedTool === 'draw'} // Only interact with nodes in Draw mode
-              cursor={selectedTool === 'draw' ? 'crosshair' : 'pointer'} // FORCE CROSSHAIR IN DRAW MODE
+              clickable={selectedTool === 'draw' || selectedTool === 'select'}
+              cursor={selectedTool === 'draw' ? 'crosshair' : 'grab'}
             />
           ))}
         </GoogleMap>

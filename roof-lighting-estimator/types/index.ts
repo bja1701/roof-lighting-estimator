@@ -66,6 +66,7 @@ export interface EstimatorState {
   // Actions
   addNode: (lat: number, lng: number) => string;
   removeNode: (id: string) => void;
+  updateNodePosition: (id: string, lat: number, lng: number) => void;
   addLine: (startNodeId: string, endNodeId: string, type?: LineType) => void;
   removeLine: (id: string) => void;
   
