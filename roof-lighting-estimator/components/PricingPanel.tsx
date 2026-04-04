@@ -28,57 +28,57 @@ const PricingPanel: React.FC = () => {
          Positioned to straddle the line between Satellite and Street View on large screens.
          lg:right-0 lg:translate-x-1/2 centers the component on the right edge of its parent.
       */}
-      <div className="absolute top-4 right-4 lg:top-8 lg:right-0 lg:translate-x-1/2 z-[60]">
-        <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-600/50 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.6)] flex items-center p-3 gap-4 group transition-all hover:scale-105 duration-200">
-            
+      <div className="absolute bottom-6 right-4 z-[60]">
+        <div className="glass-panel border border-white/30 rounded-xl shadow-[0px_20px_40px_rgba(17,28,45,0.12)] flex items-center p-3 gap-4 transition-all hover:scale-[1.02] duration-200">
+
             {/* Cost Display */}
             <div className="flex flex-col items-end pl-2">
-                <div className="text-2xl font-bold text-green-400 font-mono leading-none tracking-tight">
+                <div className="text-2xl font-headline font-black text-primary-container leading-none tracking-tight">
                     ${estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
-                <div className="text-xs font-semibold text-slate-400">
+                <div className="text-xs font-semibold text-on-surface-variant">
                     {totalLength3D.toFixed(0)} ft
                 </div>
             </div>
 
-            <div className="w-px h-10 bg-slate-700/50"></div>
+            <div className="w-px h-10 bg-outline-variant/30"></div>
 
             {/* Price Input */}
             <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Price / Ft</label>
-                <div className="flex items-center bg-slate-950/80 rounded px-2 border border-slate-700/50 hover:border-slate-500 transition-colors w-20 shadow-inner">
-                    <span className="text-slate-500 text-xs">$</span>
-                    <input 
-                        type="number" 
-                        value={pricePerFt} 
+                <label className="text-[9px] uppercase text-on-surface-variant font-bold tracking-wider">Price / Ft</label>
+                <div className="flex items-center bg-surface-container-lowest rounded-lg px-2 border border-outline-variant/30 hover:border-primary-container transition-colors w-20">
+                    <span className="text-on-surface-variant text-xs">$</span>
+                    <input
+                        type="number"
+                        value={pricePerFt}
                         onChange={(e) => setPricePerFt(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-transparent text-white text-sm font-mono focus:outline-none text-right py-1"
+                        className="w-full bg-transparent text-on-surface text-sm font-body focus:outline-none text-right py-1"
                     />
                 </div>
             </div>
 
             {/* Controller Toggle */}
-             <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Control</label>
-                <button 
+            <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase text-on-surface-variant font-bold tracking-wider">Control</label>
+                <button
                     onClick={toggleController}
                     title={`Controller Fee: $${controllerFee}`}
-                    className={`h-[26px] w-9 rounded flex items-center justify-center border transition-all ${
-                        includeController 
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(37,99,235,0.4)]' 
-                        : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300'
+                    className={`h-[26px] w-9 rounded-lg flex items-center justify-center border transition-all ${
+                        includeController
+                        ? 'bg-tertiary border-tertiary text-white shadow-sm'
+                        : 'bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
                     }`}
                 >
-                    <div className={`w-2 h-2 rounded-full transition-all duration-300 ${includeController ? 'bg-white shadow-[0_0_5px_white]' : 'bg-slate-600'}`}></div>
+                    <div className={`w-2 h-2 rounded-full transition-all duration-300 ${includeController ? 'bg-white' : 'bg-outline'}`}></div>
                 </button>
             </div>
 
-            <div className="w-px h-10 bg-slate-700/50"></div>
+            <div className="w-px h-10 bg-outline-variant/30"></div>
 
             {/* Expand / Details Button */}
-            <button 
+            <button
                 onClick={() => setIsDrawerOpen(true)}
-                className="p-2.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors active:scale-95"
+                className="p-2.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
                 title="View Breakdown"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -98,19 +98,19 @@ const PricingPanel: React.FC = () => {
          2. SLIDE-OUT DRAWER (Sidebar)
          Full height on the left side.
       */}
-      <div className={`absolute top-0 left-0 h-full w-[300px] bg-slate-900 border-r border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] z-[70] transform transition-transform duration-300 ease-out flex flex-col ${
+      <div className={`absolute top-0 left-0 h-full w-[300px] bg-surface-container-lowest border-r border-outline-variant/20 shadow-[0px_20px_40px_rgba(17,28,45,0.08)] z-[70] transform transition-transform duration-300 ease-out flex flex-col ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        
+
         {/* Drawer Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950">
+        <div className="flex items-center justify-between p-4 border-b border-outline-variant/20 bg-surface-container-low">
             <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
-                <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Breakdown</h2>
+                <div className="w-1 h-4 amber-gradient rounded-full"></div>
+                <h2 className="text-sm font-headline font-bold text-on-surface uppercase tracking-wider">Breakdown</h2>
             </div>
-            <button 
+            <button
                 onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
@@ -119,16 +119,16 @@ const PricingPanel: React.FC = () => {
         </div>
 
         {/* Drawer Content (Scrollable List) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto">
             <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-900 sticky top-0 z-10 text-[10px] uppercase text-slate-500 font-bold tracking-wide shadow-sm">
+                <thead className="bg-surface-container-low sticky top-0 z-10 text-[10px] uppercase text-on-surface-variant font-bold tracking-wide">
                     <tr>
-                        <th className="p-3 border-b border-slate-800">Type</th>
-                        <th className="p-3 border-b border-slate-800 text-center">Pitch</th>
-                        <th className="p-3 border-b border-slate-800 text-right">Cost</th>
+                        <th className="p-3 border-b border-outline-variant/20">Type</th>
+                        <th className="p-3 border-b border-outline-variant/20 text-center">Pitch</th>
+                        <th className="p-3 border-b border-outline-variant/20 text-right">Cost</th>
                     </tr>
                 </thead>
-                <tbody className="text-xs font-mono">
+                <tbody className="text-xs">
                     {lines.map((line) => {
                         const startNode = nodes.find(n => n.id === line.startNodeId);
                         const endNode = nodes.find(n => n.id === line.endNodeId);
@@ -142,28 +142,28 @@ const PricingPanel: React.FC = () => {
                         const isSelected = selectedLineId === line.id;
 
                         return (
-                            <tr 
-                                key={line.id} 
+                            <tr
+                                key={line.id}
                                 onClick={() => selectLine(line.id)}
-                                className={`border-b border-slate-800/50 transition-colors cursor-pointer group ${
-                                    isSelected ? 'bg-blue-900/30 border-l-2 border-l-blue-500' : 'hover:bg-slate-800/30 border-l-2 border-l-transparent'
+                                className={`border-b border-outline-variant/10 transition-colors cursor-pointer group ${
+                                    isSelected ? 'bg-primary-container/10 border-l-2 border-l-primary-container' : 'hover:bg-surface-container-low border-l-2 border-l-transparent'
                                 }`}
                             >
                                 <td className="p-3">
-                                    <div className="text-slate-300 font-medium capitalize truncate w-20 group-hover:text-white transition-colors">
+                                    <div className="text-on-surface font-medium capitalize truncate w-20 group-hover:text-primary transition-colors">
                                         {line.type}
                                     </div>
-                                    <div className="text-[9px] text-slate-600">{len3D.toFixed(1)} ft</div>
+                                    <div className="text-[9px] text-on-surface-variant">{len3D.toFixed(1)} ft</div>
                                 </td>
                                 <td className="p-3 text-center align-middle">
-                                    <span 
+                                    <span
                                         className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-sm inline-block min-w-[36px]"
                                         style={{ backgroundColor: pitchColor }}
                                     >
                                         {line.pitch}
                                     </span>
                                 </td>
-                                <td className="p-3 text-right text-slate-300 font-medium group-hover:text-green-400 transition-colors">
+                                <td className="p-3 text-right text-on-surface font-medium group-hover:text-primary-container transition-colors">
                                     ${cost.toFixed(0)}
                                 </td>
                             </tr>
@@ -171,7 +171,7 @@ const PricingPanel: React.FC = () => {
                     })}
                     {lines.length === 0 && (
                         <tr>
-                            <td colSpan={3} className="p-8 text-center text-slate-600 italic text-xs">
+                            <td colSpan={3} className="p-8 text-center text-on-surface-variant italic text-xs">
                                 No lines drawn yet.
                             </td>
                         </tr>
@@ -181,20 +181,20 @@ const PricingPanel: React.FC = () => {
         </div>
 
         {/* Drawer Footer (Summary) */}
-        <div className="p-5 bg-slate-950 border-t border-slate-800 space-y-3 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-20">
+        <div className="p-5 bg-surface-container-low border-t border-outline-variant/20 space-y-3 z-20">
              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Lines Cost:</span>
-                <span className="text-slate-300 font-mono">${(estimatedCost - (includeController ? controllerFee : 0)).toLocaleString()}</span>
+                <span className="text-on-surface-variant font-medium">Lines Cost:</span>
+                <span className="text-on-surface font-medium">${(estimatedCost - (includeController ? controllerFee : 0)).toLocaleString()}</span>
              </div>
              {includeController && (
                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-medium">Controller Fee:</span>
-                    <span className="text-blue-400 font-mono">+${controllerFee}</span>
+                    <span className="text-on-surface-variant font-medium">Controller Fee:</span>
+                    <span className="text-tertiary font-medium">+${controllerFee}</span>
                  </div>
              )}
-             <div className="flex justify-between items-center pt-3 border-t border-slate-800 mt-2">
-                <span className="text-sm font-bold text-slate-100 uppercase tracking-wide">Total Estimate</span>
-                <span className="text-2xl font-bold text-green-400 font-mono shadow-green-500/20 drop-shadow-sm">${estimatedCost.toLocaleString()}</span>
+             <div className="flex justify-between items-center pt-3 border-t border-outline-variant/20 mt-2">
+                <span className="text-sm font-headline font-bold text-on-surface uppercase tracking-wide">Total</span>
+                <span className="text-2xl font-headline font-black text-primary-container">${estimatedCost.toLocaleString()}</span>
              </div>
         </div>
 

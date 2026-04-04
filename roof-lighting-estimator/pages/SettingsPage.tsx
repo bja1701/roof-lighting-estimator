@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
+import SharedLayout from '../components/SharedLayout';
+
+const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
+const inputCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
 
 export default function SettingsPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,12 +43,10 @@ export default function SettingsPage() {
     if (!file || !user) return;
     setUploading(true);
     setError('');
-
     const ext = file.name.split('.').pop();
     const path = `${user.id}/logo.${ext}`;
     const { error: uploadErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
     if (uploadErr) { setError(uploadErr.message); setUploading(false); return; }
-
     const { data: urlData } = supabase.storage.from('logos').getPublicUrl(path);
     setLogoUrl(urlData.publicUrl);
     setUploading(false);
@@ -72,167 +72,157 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center gap-4">
-        <button
-          onClick={() => navigate('/')}
-          className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-          Jobs
-        </button>
-        <span className="text-slate-700">/</span>
-        <span className="text-white font-semibold">Settings</span>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-bold text-white mb-8">Account Settings</h1>
+    <SharedLayout>
+      <div className="max-w-3xl mx-auto px-6 md:px-10 py-10">
+        {/* Page header */}
+        <div className="mb-12">
+          <h1 className="font-headline font-black text-5xl tracking-tight text-on-surface mb-2">Settings</h1>
+          <p className="text-lg text-on-surface-variant">Manage your company branding, pricing defaults, and account details.</p>
+        </div>
 
         <div className="space-y-8">
           {/* Company Branding */}
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-base font-semibold text-white mb-5">Company Branding</h2>
-            <div className="space-y-4">
-              {/* Logo */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-primary-container/10 rounded-lg flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary-container text-base">business</span>
+              </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-2">Logo</label>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
-                    {logoUrl
-                      ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                      : <svg className="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
-                    }
-                  </div>
-                  <div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="px-3 py-1.5 text-sm border border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 rounded-lg transition-colors"
-                    >
-                      {uploading ? 'Uploading…' : 'Upload Logo'}
-                    </button>
-                    <p className="text-xs text-slate-600 mt-1">PNG or JPG, max 2MB. Shown on PDF exports.</p>
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                  </div>
+                <h2 className="font-headline font-bold text-on-surface">Company Branding</h2>
+                <p className="text-xs text-on-surface-variant">Shown on all PDF exports and proposals</p>
+              </div>
+            </div>
+
+            {/* Logo upload */}
+            <div className="mb-6">
+              <label className={labelCls}>Logo</label>
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 bg-surface-container-low rounded-xl flex items-center justify-center overflow-hidden border border-outline-variant/10">
+                  {logoUrl
+                    ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                    : <span className="material-symbols-outlined text-on-surface-variant text-3xl">image</span>
+                  }
+                </div>
+                <div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="px-4 py-2.5 bg-surface-container-low text-primary font-semibold text-sm rounded-lg hover:bg-surface-container transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-base">upload</span>
+                    {uploading ? 'Uploading…' : 'Upload Logo'}
+                  </button>
+                  <p className="text-xs text-on-surface-variant mt-1.5">PNG or JPG, max 2MB. Shown on PDF exports.</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Company Name</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className={labelCls}>Company Name</label>
+                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Your Company" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Your Name</label>
+                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Brighton Jones" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Phone</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(801) 555-0100" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Brand Accent Color</label>
+                <div className="flex items-center gap-3">
                   <input
-                    type="text"
-                    value={companyName}
-                    onChange={e => setCompanyName(e.target.value)}
-                    placeholder="Your Company"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                    type="color"
+                    value={brandColor}
+                    onChange={e => setBrandColor(e.target.value)}
+                    className="w-12 h-12 rounded-lg border border-outline-variant/20 bg-surface-container-low cursor-pointer p-1"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Your Name</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    placeholder="Brighton Jones"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Phone</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    placeholder="(801) 555-0100"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Brand Accent Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={brandColor}
-                      onChange={e => setBrandColor(e.target.value)}
-                      className="w-10 h-10 rounded-lg border border-slate-700 bg-slate-800 cursor-pointer p-0.5"
-                    />
-                    <input
-                      type="text"
-                      value={brandColor}
-                      onChange={e => setBrandColor(e.target.value)}
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
-                    />
-                  </div>
+                  <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm font-label transition-all" />
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Pricing */}
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-base font-semibold text-white mb-1">Pricing Defaults</h2>
-            <p className="text-xs text-slate-500 mb-5">Applied to all new estimates. You can override per-estimate in the toolbar.</p>
-            <div className="space-y-4">
+          {/* Pricing Defaults */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-primary-container/10 rounded-lg flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary-container text-base">sell</span>
+              </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Price per Linear Foot</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-sm">$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.25}
-                    value={pricePerFoot}
-                    onChange={e => setPricePerFoot(parseFloat(e.target.value) || 0)}
-                    className="w-32 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
-                  />
-                  <span className="text-slate-500 text-xs">/ ft</span>
+                <h2 className="font-headline font-bold text-on-surface">Pricing Defaults</h2>
+              </div>
+            </div>
+            <p className="text-sm text-on-surface-variant mb-6">Applied to all new estimates. You can override per-estimate in the toolbar.</p>
+
+            <div className="space-y-5">
+              <div>
+                <label className={labelCls}>Price per Linear Foot</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-surface-container-low rounded-lg overflow-hidden border border-outline-variant/10 focus-within:ring-2 focus-within:ring-primary-container transition-all">
+                    <span className="pl-4 text-on-surface-variant text-sm">$</span>
+                    <input
+                      type="number" min={0} step={0.25} value={pricePerFoot}
+                      onChange={e => setPricePerFoot(parseFloat(e.target.value) || 0)}
+                      className="w-28 bg-transparent px-3 py-3 text-sm text-on-surface focus:outline-none"
+                    />
+                  </div>
+                  <span className="text-on-surface-variant text-sm">/ linear foot</span>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Controller Fee</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-sm">$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={10}
-                    value={controllerFee}
-                    onChange={e => setControllerFee(parseFloat(e.target.value) || 0)}
-                    className="w-32 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
-                  />
+                <label className={labelCls}>Controller Fee</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-surface-container-low rounded-lg overflow-hidden border border-outline-variant/10 focus-within:ring-2 focus-within:ring-primary-container transition-all">
+                    <span className="pl-4 text-on-surface-variant text-sm">$</span>
+                    <input
+                      type="number" min={0} step={10} value={controllerFee}
+                      onChange={e => setControllerFee(parseFloat(e.target.value) || 0)}
+                      className="w-28 bg-transparent px-3 py-3 text-sm text-on-surface focus:outline-none"
+                    />
+                  </div>
+                  <span className="text-on-surface-variant text-sm">flat fee</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIncludeController(!includeController)}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${includeController ? 'bg-amber-500' : 'bg-slate-700'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${includeController ? 'bg-primary-container' : 'bg-surface-container-high'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${includeController ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${includeController ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                 </button>
-                <span className="text-sm text-slate-300">Include controller by default</span>
+                <span className="text-sm text-on-surface">Include controller by default</span>
               </div>
             </div>
           </section>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-950/50 border border-red-900/50 rounded-lg px-4 py-3">{error}</p>
+            <div className="bg-error-container/30 border-l-4 border-error p-4 rounded-r-lg">
+              <p className="text-sm text-error font-medium">{error}</p>
+            </div>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-semibold text-sm rounded-lg transition-colors"
+              className="amber-gradient text-white font-headline font-bold py-3 px-8 rounded-lg shadow-md active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
             >
               {saving ? 'Saving…' : 'Save Settings'}
+              {!saving && <span className="material-symbols-outlined text-xl">check</span>}
             </button>
-            {saved && <span className="text-sm text-green-400">Saved!</span>}
+            {saved && (
+              <span className="text-sm text-tertiary font-medium flex items-center gap-1">
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                Saved!
+              </span>
+            )}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </SharedLayout>
   );
 }

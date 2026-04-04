@@ -55,23 +55,21 @@ const EstimatorPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-900 text-white font-sans overflow-hidden">
+    <div className="flex flex-col h-screen w-screen bg-surface text-on-surface font-body overflow-hidden">
       <MapWrapper>
-        {/* Top Bar */}
-        <header className="h-14 flex-none bg-slate-950 border-b border-slate-800 flex items-center justify-between px-4 z-50 shadow-md relative">
+        {/* Top Bar — Stitch frosted glass style */}
+        <header className="h-14 flex-none bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-between px-4 z-50 shadow-sm relative">
           {/* Logo + Back */}
           <div className="flex items-center gap-3 w-[220px] flex-none">
             <button
               onClick={() => navigate('/')}
-              className="text-slate-500 hover:text-white transition-colors p-1"
+              className="text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center gap-1"
               title="Back to Jobs"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
+              <span className="material-symbols-outlined text-base">arrow_back</span>
             </button>
-            <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-amber-600 rounded shadow-lg shadow-amber-500/20 flex-none"></div>
-            <h1 className="hidden md:block text-sm font-bold bg-gradient-to-r from-amber-100 to-amber-200 bg-clip-text text-transparent whitespace-nowrap tracking-wide">
+            <div className="w-6 h-6 amber-gradient rounded shadow-md flex-none"></div>
+            <h1 className="hidden md:block text-sm font-headline font-bold text-on-surface whitespace-nowrap tracking-tight">
               Roof Estimator
             </h1>
           </div>
@@ -83,11 +81,11 @@ const EstimatorPage: React.FC = () => {
 
           {/* Controls */}
           <div className="flex gap-2 w-auto justify-end items-center">
-            <div className="hidden md:flex bg-slate-900 p-0.5 rounded-lg border border-slate-700">
+            <div className="hidden md:flex bg-surface-container-low p-0.5 rounded-lg">
               <button
                 onClick={() => setMode('manual')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  mode === 'manual' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'
+                  mode === 'manual' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
                 Manual
@@ -95,7 +93,7 @@ const EstimatorPage: React.FC = () => {
               <button
                 onClick={() => setMode('solar')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  mode === 'solar' ? 'bg-amber-900/50 text-amber-200 border border-amber-900' : 'text-slate-400 hover:text-white'
+                  mode === 'solar' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
                 Solar
@@ -104,7 +102,7 @@ const EstimatorPage: React.FC = () => {
 
             <button
               onClick={reset}
-              className="px-3 py-1 text-xs font-medium text-red-400 hover:bg-red-950 rounded border border-red-900/50 transition-colors"
+              className="px-3 py-1 text-xs font-medium text-error hover:bg-error-container/30 rounded-lg transition-colors"
             >
               Clear
             </button>
@@ -112,7 +110,7 @@ const EstimatorPage: React.FC = () => {
             <button
               onClick={() => setShowSaveModal(true)}
               disabled={profile?.subscription_tier === 'free' && (profile?.estimates_used ?? 0) >= 5}
-              className="px-3 py-1 text-xs font-semibold bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 rounded transition-colors"
+              className="px-4 py-1.5 text-xs font-headline font-bold amber-gradient text-white rounded-lg shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Save Estimate
             </button>

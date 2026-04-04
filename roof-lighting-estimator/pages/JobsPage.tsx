@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
+import SharedLayout from '../components/SharedLayout';
 import NewJobModal from '../components/NewJobModal';
 
 interface Job {
@@ -14,18 +14,33 @@ interface Job {
   quote_count?: number;
 }
 
+const STATUS_COLORS: Record<number, { label: string; cls: string }> = {
+  0: { label: 'No Estimates', cls: 'bg-surface-container text-on-surface-variant' },
+  1: { label: 'In Progress', cls: 'bg-secondary-container text-on-secondary-container' },
+};
+
+function getStatusChip(count: number) {
+  if (count === 0) return STATUS_COLORS[0];
+  if (count >= 1) return { label: `${count} Estimate${count > 1 ? 's' : ''}`, cls: 'bg-tertiary-container/30 text-tertiary' };
+  return STATUS_COLORS[0];
+}
+
+// Roof image bank — rotate through for visual interest
+const CARD_IMAGES = [
+  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=400&h=200&fit=crop',
+];
+
 export default function JobsPage() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewJob, setShowNewJob] = useState(false);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  useEffect(() => { fetchJobs(); }, []);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -33,13 +48,8 @@ export default function JobsPage() {
       .from('jobs')
       .select('*, quotes(count)')
       .order('created_at', { ascending: false });
-
     if (data) {
-      const mapped = data.map((j: any) => ({
-        ...j,
-        quote_count: j.quotes?.[0]?.count ?? 0,
-      }));
-      setJobs(mapped);
+      setJobs(data.map((j: any) => ({ ...j, quote_count: j.quotes?.[0]?.count ?? 0 })));
     }
     setLoading(false);
   };
@@ -50,154 +60,144 @@ export default function JobsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg shadow-md shadow-amber-500/20"></div>
-          <span className="font-bold text-white tracking-tight">Roof Estimator</span>
-        </div>
-        <nav className="flex items-center gap-1">
-          <button
-            onClick={() => navigate('/estimator')}
-            className="px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Estimator
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Settings
-          </button>
-          {profile?.role === 'admin' && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="px-3 py-1.5 text-sm text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 rounded-lg transition-colors"
-            >
-              Admin
-            </button>
-          )}
-          <button
-            onClick={signOut}
-            className="ml-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Sign Out
-          </button>
-        </nav>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
+    <SharedLayout>
+      <div className="px-6 md:px-10 py-10 max-w-6xl mx-auto">
+        {/* Page header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-2xl font-bold text-white">Jobs</h1>
-            <p className="text-slate-400 text-sm mt-0.5">Manage your client projects and estimates</p>
+            <h1 className="font-headline font-black text-5xl tracking-tight text-on-surface mb-2">Jobs</h1>
+            <p className="text-lg text-on-surface-variant">Manage your active roofing projects, client estimates, and site documentation.</p>
           </div>
-          <button
-            onClick={() => setShowNewJob(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm rounded-lg transition-colors shadow-lg shadow-amber-500/20"
-          >
-            <span className="text-base leading-none">+</span>
-            New Job
-          </button>
+          <div className="flex flex-col items-end gap-4">
+            {profile?.subscription_tier === 'free' && (
+              <div className="w-64 bg-surface-container rounded-xl p-4 shadow-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-label uppercase tracking-wider text-secondary">Usage Tier</span>
+                  <span className="text-xs font-bold text-on-surface">{profile.estimates_used ?? 0} / 5 estimates</span>
+                </div>
+                <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                  <div
+                    className="amber-gradient h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(100, ((profile.estimates_used ?? 0) / 5) * 100)}%` }}
+                  />
+                </div>
+                {(profile.estimates_used ?? 0) >= 5 && (
+                  <p className="text-[10px] text-error mt-2 font-medium">Limit reached — contact us to upgrade</p>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setShowNewJob(true)}
+              className="amber-gradient text-white font-headline font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-xl">add</span>
+              New Job
+            </button>
+          </div>
         </div>
 
-        {/* Usage bar for free tier */}
-        {profile?.subscription_tier === 'free' && (
-          <div className="mb-6 bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-slate-300">
-                <span className="font-semibold text-white">{profile.estimates_used}</span>
-                <span className="text-slate-400"> / 5 free estimates used</span>
-              </div>
-              <div className="w-32 h-1.5 bg-slate-700 rounded-full">
-                <div
-                  className="h-1.5 bg-amber-500 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (profile.estimates_used / 5) * 100)}%` }}
-                />
-              </div>
-            </div>
-            {profile.estimates_used >= 5 && (
-              <span className="text-xs text-amber-400 font-medium bg-amber-950/50 px-2.5 py-1 rounded-full border border-amber-800/50">
-                Limit reached — contact us to upgrade
-              </span>
-            )}
+        {/* Search + filter bar */}
+        <div className="mb-8 flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[260px] relative">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+            <input
+              type="text"
+              placeholder="Search by client name, address, or job…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-surface-container-lowest border-none rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface placeholder:text-on-surface-variant/50 transition-all"
+            />
           </div>
-        )}
-
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search jobs or addresses…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors"
-          />
         </div>
 
         {/* Jobs Grid */}
         {loading ? (
-          <div className="text-center py-16 text-slate-500">Loading…</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[1,2,3].map(i => (
+              <div key={i} className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden animate-pulse">
+                <div className="h-32 bg-surface-container-low" />
+                <div className="p-6 space-y-3">
+                  <div className="h-4 bg-surface-container-low rounded w-3/4" />
+                  <div className="h-3 bg-surface-container-low rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 border border-slate-800 rounded-2xl bg-slate-900/50">
-            <div className="w-12 h-12 bg-slate-800 rounded-xl mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
+          <div className="text-center py-24 bg-surface-container-lowest rounded-2xl shadow-sm">
+            <div className="w-16 h-16 bg-surface-container rounded-2xl mx-auto mb-5 flex items-center justify-center">
+              <span className="material-symbols-outlined text-on-surface-variant text-3xl">home_work</span>
             </div>
-            <p className="text-slate-400 font-medium mb-1">No jobs yet</p>
-            <p className="text-slate-600 text-sm mb-5">Create your first job to start estimating</p>
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">No jobs yet</h3>
+            <p className="text-on-surface-variant text-sm mb-6">Create your first job to start estimating rooflines</p>
             <button
               onClick={() => setShowNewJob(true)}
-              className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm rounded-lg transition-colors"
+              className="amber-gradient text-white font-headline font-bold py-3 px-8 rounded-lg shadow-md active:scale-95 transition-all"
             >
               Create First Job
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(job => (
-              <div
-                key={job.id}
-                onClick={() => navigate(`/jobs/${job.id}`)}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:shadow-black/30 group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-9 h-9 bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-800/30 rounded-lg flex items-center justify-center">
-                    <svg className="w-4.5 h-4.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filtered.map((job, idx) => {
+              const chip = getStatusChip(job.quote_count ?? 0);
+              return (
+                <div
+                  key={job.id}
+                  className="group bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-outline-variant/10 cursor-pointer"
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                >
+                  {/* Image header */}
+                  <div className="h-32 w-full overflow-hidden relative bg-surface-container-low">
+                    <img
+                      src={CARD_IMAGES[idx % CARD_IMAGES.length]}
+                      alt={job.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${chip.cls}`}>
+                      {chip.label}
+                    </div>
                   </div>
-                  <span className="text-xs text-slate-500">
-                    {new Date(job.created_at).toLocaleDateString()}
-                  </span>
+
+                  <div className="p-6">
+                    <h3 className="text-xl font-headline font-bold text-on-surface mb-1">{job.name}</h3>
+                    {job.address && (
+                      <p className="text-sm text-on-surface-variant flex items-center gap-1 mb-4">
+                        <span className="material-symbols-outlined text-sm">location_on</span>
+                        {job.address}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 mb-5">
+                      <div>
+                        <p className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">Created</p>
+                        <p className="text-sm font-semibold text-on-surface">
+                          {new Date(job.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">Estimates</p>
+                        <p className="text-sm font-semibold text-on-surface">{job.quote_count ?? 0} saved</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between w-full py-3 px-4 bg-surface-container-low text-primary font-bold rounded-lg group-hover:bg-primary group-hover:text-white transition-all">
+                      <span>View Details</span>
+                      <span className="material-symbols-outlined">arrow_forward</span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="font-semibold text-white mb-0.5 group-hover:text-amber-100 transition-colors">{job.name}</h3>
-                {job.address && <p className="text-xs text-slate-400 truncate mb-3">{job.address}</p>}
-                <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-800">
-                  <span className="text-xs text-slate-500">
-                    {job.quote_count} {job.quote_count === 1 ? 'estimate' : 'estimates'}
-                  </span>
-                  <span className="text-xs text-amber-500 group-hover:text-amber-400 transition-colors">View →</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-      </main>
+      </div>
 
       {showNewJob && (
         <NewJobModal
-          onCreated={(jobId) => {
-            setShowNewJob(false);
-            fetchJobs();
-            navigate(`/jobs/${jobId}`);
-          }}
+          onCreated={(jobId) => { setShowNewJob(false); fetchJobs(); navigate(`/jobs/${jobId}`); }}
           onClose={() => setShowNewJob(false)}
         />
       )}
-    </div>
+    </SharedLayout>
   );
 }
