@@ -47,7 +47,7 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
 
   if (checkEmail) {
     return (
-      <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 relative overflow-hidden">
+      <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-10 right-10 w-64 h-64 border-t border-r border-white/20"></div>
           <div className="absolute bottom-10 left-10 w-96 h-96 border-b border-l border-white/20"></div>
@@ -79,7 +79,7 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 relative overflow-hidden">
+    <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
       {/* Blueprint decoration lines */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-10 right-10 w-64 h-64 border-t border-r border-white/5 opacity-20 hidden md:block"></div>
@@ -133,7 +133,9 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
               <div>
                 <label className={labelCls} htmlFor="auth-email">Email Address</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  </svg>
                   <input id="auth-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="john@contractor.com" className={inputCls} />
                 </div>
               </div>
@@ -144,7 +146,9 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
                   {tab === 'login' && <a href="#" className="text-[11px] font-bold text-primary hover:underline">Forgot?</a>}
                 </div>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
                   <input id="auth-password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
                 </div>
               </div>
@@ -152,7 +156,9 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
               {tab === 'signup' && (
                 <div className="bg-primary-container/10 border-l-4 border-primary-container p-4 rounded-r-lg">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
+                    <svg className="w-5 h-5 text-primary-container flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
                     <p className="text-xs font-semibold text-on-primary-container">Start with 5 free estimates — no credit card required</p>
                   </div>
                 </div>
@@ -172,7 +178,11 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
                 {submitting
                   ? (tab === 'login' ? 'Signing in…' : 'Creating account…')
                   : (tab === 'login' ? 'Sign In' : 'Create Account')}
-                {!submitting && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
+                {!submitting && (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                )}
               </button>
             </form>
           </div>
