@@ -54,7 +54,7 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
         </div>
         <div className="w-full max-w-sm text-center relative z-10">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 -rotate-3 border border-white/10">
+            <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
               <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>mark_email_read</span>
             </div>
             <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-1">Check your email</h1>
@@ -89,8 +89,11 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
       <div className="relative z-10 w-full max-w-lg">
         {/* App Identity */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 -rotate-3 border border-white/10">
-            <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
+          <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
+            <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
+              <rect x="9" y="14" width="6" height="6" rx="0.5" />
+            </svg>
           </div>
           <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-2">Roof Estimator</h1>
           <p className="text-surface-variant font-label uppercase tracking-[0.2em] text-[10px]">Precision Built for Contractors</p>

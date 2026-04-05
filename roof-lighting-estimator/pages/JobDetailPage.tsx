@@ -5,6 +5,7 @@ import { useProfile } from '../hooks/useProfile';
 import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
+import ClientQuoteModal from '../components/ClientQuoteModal';
 
 interface Job {
   id: string;
@@ -35,6 +36,7 @@ export default function JobDetailPage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [clientQuoteOpen, setClientQuoteOpen] = useState(false);
 
   useEffect(() => { if (id) fetchJobAndQuotes(id); }, [id]);
 
@@ -143,21 +145,31 @@ export default function JobDetailPage() {
               )}
             </div>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={handleDeleteJob}
               disabled={deleting}
-              className="order-2 flex items-center justify-center gap-2 rounded-lg border border-error/40 bg-surface-container-lowest py-3 px-5 font-label text-sm font-bold uppercase tracking-wider text-error transition-colors hover:bg-error-container/20 disabled:opacity-50 sm:order-1"
+              className="order-3 flex items-center justify-center gap-2 rounded-lg border border-error/40 bg-surface-container-lowest py-3 px-5 font-label text-sm font-bold uppercase tracking-wider text-error transition-colors hover:bg-error-container/20 disabled:opacity-50 sm:order-1"
             >
               <span className="material-symbols-outlined text-lg">delete</span>
               {deleting ? 'Deleting…' : 'Delete job'}
             </button>
             <button
               type="button"
+              onClick={() => setClientQuoteOpen(true)}
+              disabled={quotes.length === 0}
+              title={quotes.length === 0 ? 'Save at least one estimate first' : 'Build a PDF for your client'}
+              className="order-2 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-45 sm:order-2"
+            >
+              <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+              Client quote
+            </button>
+            <button
+              type="button"
               onClick={() => handleOpenEstimator()}
               disabled={!canEstimate}
-              className="order-1 amber-gradient flex items-center justify-center gap-3 rounded-lg py-4 px-8 font-headline font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:order-2"
+              className="order-1 amber-gradient flex items-center justify-center gap-3 rounded-lg py-4 px-8 font-headline font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:order-3"
             >
               <span className="material-symbols-outlined">add</span>
               New Estimate
@@ -203,7 +215,6 @@ export default function JobDetailPage() {
               <QuoteCard
                 key={quote.id}
                 quote={quote}
-                job={job}
                 profile={profile}
                 onDelete={() => handleDeleteQuote(quote.id)}
                 onEdit={() => handleOpenEstimator(quote)}
@@ -212,6 +223,14 @@ export default function JobDetailPage() {
           </div>
         )}
       </div>
+
+      <ClientQuoteModal
+        open={clientQuoteOpen}
+        onClose={() => setClientQuoteOpen(false)}
+        job={{ name: job.name, address: job.address }}
+        quotes={quotes}
+        profile={profile}
+      />
     </SharedLayout>
   );
 }
