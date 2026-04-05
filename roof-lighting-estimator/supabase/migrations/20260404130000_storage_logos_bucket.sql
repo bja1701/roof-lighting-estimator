@@ -3,9 +3,10 @@
 --
 -- Apply via: Supabase Dashboard → SQL → New query → Run, or `supabase db push`.
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('logos', 'logos', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+-- file_size_limit in bytes (10 MiB); null = platform default, which is often small
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('logos', 'logos', true, 10485760)
+ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 10485760;
 
 DROP POLICY IF EXISTS "logos: public read" ON storage.objects;
 DROP POLICY IF EXISTS "logos: authenticated insert own folder" ON storage.objects;

@@ -29,34 +29,109 @@ interface Props {
   onEdit: () => void;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export default function QuoteCard({ quote, job, profile, onDelete, onEdit }: Props) {
   const estimatorLocked = isFreeTierEstimatorExhausted(profile);
 
   const handlePrint = () => {
-    const lineItemsHtml = (quote.line_items ?? []).map((item: any) => `
-      <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${item.type ?? 'Segment'}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.pitch ?? '—'}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(item.length3d ?? 0).toFixed(1)} ft</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${((item.length3d ?? 0) * (quote.price_per_foot ?? 4)).toFixed(2)}</td>
-      </tr>
-    `).join('');
-    const accentColor = profile?.brand_color ?? '#f59e0b';
-    const companyName = profile?.company_name ?? 'Roof Estimator';
-    const userName = profile?.full_name ?? '';
-    const phone = profile?.phone ?? '';
-    const email = profile?.email ?? '';
+    const accent = profile?.brand_color ?? '#d97706';
+    const companyName = escapeHtml(profile?.company_name ?? 'Roof Estimator');
+    const userName = escapeHtml(profile?.full_name ?? '');
+    const phone = escapeHtml(profile?.phone ?? '');
+    const email = escapeHtml(profile?.email ?? '');
     const logoUrl = profile?.logo_url ?? '';
-    const controllerLine = quote.include_controller && (quote.controller_fee ?? 0) > 0
-      ? `<tr><td colspan="3" style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">Controller</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(quote.controller_fee ?? 0).toFixed(2)}</td></tr>`
+    const jobName = escapeHtml(job.name);
+    const jobAddr = job.address ? escapeHtml(job.address) : '';
+    const quoteLabel = escapeHtml(quote.label);
+    const notesHtml = quote.notes?.trim()
+      ? `<div class="notes"><h4>Notes</h4><p>${escapeHtml(quote.notes.trim())}</p></div>`
       : '';
+
+    const footage = quote.total_linear_ft ?? 0;
+    const total = quote.total_price ?? 0;
+    const ppf = quote.price_per_foot ?? 4;
+    const ctrlFee = quote.controller_fee ?? 0;
+    const hasController = !!(quote.include_controller && ctrlFee > 0);
+    const lightingSubtotal = hasController ? Math.max(0, total - ctrlFee) : total;
+
+    const fmt = (n: number) =>
+      n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dateStr = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const summaryRows = `
+      <div class="row"><span class="k">Estimated roof perimeter</span><span class="v">${footage.toFixed(1)} linear ft</span></div>
+      <div class="row"><span class="k">Lighting subtotal <span class="hint">(@ $${fmt(ppf)}/ft)</span></span><span class="v">$${fmt(lightingSubtotal)}</span></div>
+      ${
+        hasController
+          ? `<div class="row"><span class="k">Controller &amp; installation</span><span class="v">$${fmt(ctrlFee)}</span></div>`
+          : ''
+      }
+    `;
+
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${jobName} — ${quoteLabel}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;background:#f1f5f9;padding:36px 24px}
+.sheet{max-width:640px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,.12)}
+.topbar{height:5px;background:${accent}}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:32px 36px 28px;background:linear-gradient(180deg,#fafafa 0%,#fff 60%)}
+.logo{max-height:64px;max-width:180px;object-fit:contain;display:block}
+.mark{width:56px;height:56px;border-radius:14px;background:${accent};flex-shrink:0}
+.co{text-align:right}
+.co h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;color:#0f172a}
+.co p{font-size:.8rem;color:#64748b;margin-top:4px;line-height:1.45}
+.co .date{margin-top:10px;font-weight:600;color:#475569}
+.body{padding:8px 36px 36px}
+.prepared{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#94a3b8;font-weight:700;margin-bottom:20px}
+.jobline{font-size:1.35rem;font-weight:800;letter-spacing:-.03em;color:#0f172a;line-height:1.25}
+.addr{font-size:.9rem;color:#64748b;margin-top:8px;line-height:1.5}
+.divider{height:1px;background:#e2e8f0;margin:28px 0}
+.est-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;font-weight:700}
+.est-title{font-size:1.05rem;font-weight:700;color:#334155;margin-top:6px}
+.summary{margin-top:24px;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#f8fafc}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 20px;border-bottom:1px solid #e2e8f0;font-size:.9rem}
+.row:last-of-type{border-bottom:none}
+.row .k{color:#475569}
+.row .v{font-weight:700;color:#0f172a;white-space:nowrap}
+.hint{font-weight:400;color:#94a3b8;font-size:.8rem}
+.total-wrap{padding:28px 24px 32px;text-align:center;background:#fff;border-top:1px solid #e2e8f0}
+.total-wrap .lbl{font-size:.75rem;text-transform:uppercase;letter-spacing:.14em;color:#64748b;font-weight:700}
+.total-wrap .amt{font-size:2.75rem;font-weight:800;letter-spacing:-.04em;color:${accent};margin-top:8px;line-height:1}
+.total-wrap .sub{font-size:.85rem;color:#94a3b8;margin-top:10px}
+.notes{margin:24px 36px 0;padding:18px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0}
+.notes h4{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:8px}
+.notes p{font-size:.875rem;color:#475569;line-height:1.55;white-space:pre-wrap}
+.foot{padding:24px 36px 32px;text-align:center;font-size:.75rem;color:#94a3b8;line-height:1.6;border-top:1px solid #f1f5f9}
+@media print{body{background:#fff;padding:0}.sheet{border:none;box-shadow:none;border-radius:0;max-width:none}}
+</style></head><body><div class="sheet"><div class="topbar"></div><div class="head"><div>${
+      logoUrl
+        ? `<img class="logo" src="${escapeHtml(logoUrl)}" alt=""/>`
+        : `<div class="mark" aria-hidden="true"></div>`
+    }</div><div class="co"><h1>${companyName}</h1>${
+      userName ? `<p>${userName}</p>` : ''
+    }${phone ? `<p>${phone}</p>` : ''}${email ? `<p>${email}</p>` : ''}<p class="date">${escapeHtml(
+      dateStr
+    )}</p></div></div><div class="body"><p class="prepared">Estimate prepared for</p><p class="jobline">${jobName}</p>${
+      jobAddr ? `<p class="addr">${jobAddr}</p>` : ''
+    }<div class="divider"></div><p class="est-label">Estimate</p><p class="est-title">${quoteLabel}</p><div class="summary">${summaryRows}</div><div class="total-wrap"><p class="lbl">Total investment</p><p class="amt">$${fmt(
+      total
+    )}</p><p class="sub">Good for discussion; final pricing may vary with site conditions.</p></div></div>${notesHtml}<div class="foot">Thank you for considering ${companyName} for your project.</div></div><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`;
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${job.name} — ${quote.label}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;padding:40px;max-width:700px;margin:0 auto}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.logo{max-height:56px;max-width:160px;object-fit:contain}.company{text-align:right}.company h2{font-size:18px;font-weight:700;color:#111}.company p{font-size:12px;color:#6b7280;margin-top:2px}.divider{height:3px;background:${accentColor};margin:24px 0;border-radius:2px}.meta{display:flex;justify-content:space-between;margin-bottom:24px}.meta-block h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;font-weight:600;margin-bottom:4px}.meta-block p{font-size:14px;color:#111;font-weight:500}.meta-block p.sub{font-size:12px;color:#6b7280;font-weight:400}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px}thead th{padding:8px 12px;text-align:left;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;font-weight:600}thead th:last-child,thead th:nth-child(3),thead th:nth-child(4){text-align:right}.total-row td{padding:10px 12px;font-weight:700;font-size:14px;border-top:2px solid #111}.total-row td:last-child{text-align:right;color:${accentColor}}.notes{margin-top:20px;padding:12px 16px;background:#f9fafb;border-radius:8px;font-size:12px;color:#6b7280}.footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af}.accent-bar{height:4px;background:${accentColor};border-radius:2px;margin-top:32px}@media print{body{padding:20px}}</style></head><body><div class="header"><div>${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" />` : `<div style="width:48px;height:48px;background:${accentColor};border-radius:8px;"></div>`}</div><div class="company"><h2>${companyName}</h2>${userName ? `<p>${userName}</p>` : ''}${phone ? `<p>${phone}</p>` : ''}${email ? `<p>${email}</p>` : ''}<p>Date: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p></div></div><div class="divider"></div><div class="meta"><div class="meta-block"><h3>Job</h3><p>${job.name}</p>${job.address ? `<p class="sub">${job.address}</p>` : ''}</div><div class="meta-block" style="text-align:right"><h3>Estimate</h3><p>${quote.label}</p></div></div><table><thead><tr><th>Section</th><th style="text-align:center">Pitch</th><th style="text-align:right">Linear Ft</th><th style="text-align:right">Total</th></tr></thead><tbody>${lineItemsHtml}${controllerLine}<tr class="total-row"><td colspan="2">TOTAL</td><td style="text-align:right">${(quote.total_linear_ft ?? 0).toFixed(1)} ft</td><td>$${(quote.total_price ?? 0).toFixed(2)}</td></tr></tbody></table>${quote.notes ? `<div class="notes"><strong>Notes:</strong> ${quote.notes}</div>` : ''}<div class="accent-bar"></div><div class="footer">Thank you for your business.</div><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
+    printWindow.document.write(html);
     printWindow.document.close();
   };
-
-  const quoteCount = quote.line_items?.length ?? 0;
 
   return (
     <div className="bg-surface-container-lowest p-1 rounded-xl shadow-sm border border-outline-variant/10 hover:shadow-md transition-shadow group">
@@ -103,22 +178,6 @@ export default function QuoteCard({ quote, job, profile, onDelete, onEdit }: Pro
             </button>
           </div>
         </div>
-
-        {/* Line items preview */}
-        {quoteCount > 0 && (
-          <div className="space-y-2 mb-8">
-            {quote.line_items.slice(0, 3).map((item: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 text-sm text-on-surface-variant">
-                <span className="w-1.5 h-1.5 rounded-full bg-outline-variant flex-shrink-0"></span>
-                <span className="truncate capitalize">{item.type ?? 'Segment'}{item.pitch ? ` · ${item.pitch}` : ''}</span>
-                <span className="ml-auto font-medium text-on-surface">{(item.length3d ?? 0).toFixed(1)} ft</span>
-              </div>
-            ))}
-            {quoteCount > 3 && (
-              <p className="text-xs text-on-surface-variant/60 pl-4">+{quoteCount - 3} more segments</p>
-            )}
-          </div>
-        )}
 
         {/* Totals footer */}
         <div className="flex justify-between items-end pt-6 border-t border-slate-100">

@@ -7,6 +7,13 @@ import SharedLayout from '../components/SharedLayout';
 const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
 const inputCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
 
+/** Must stay in sync with storage.buckets.file_size_limit for `logos` (see supabase migrations). */
+const LOGO_MAX_BYTES = 10 * 1024 * 1024;
+
+function formatMaxLogoMb() {
+  return String(Math.round(LOGO_MAX_BYTES / (1024 * 1024)));
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
@@ -43,6 +50,14 @@ export default function SettingsPage() {
     if (!file || !user) return;
     setUploading(true);
     setError('');
+    if (file.size > LOGO_MAX_BYTES) {
+      setError(
+        `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Logos must be at most ${formatMaxLogoMb()} MB (use a smaller image or export a compressed PNG/JPG).`
+      );
+      setUploading(false);
+      e.target.value = '';
+      return;
+    }
     const ext = file.name.split('.').pop();
     const path = `${user.id}/logo.${ext}`;
     const { error: uploadErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
@@ -51,7 +66,9 @@ export default function SettingsPage() {
       setError(
         /row-level security|rls/i.test(msg)
           ? 'Logo upload is blocked by Storage security rules. In Supabase: open SQL Editor and run the migration `supabase/migrations/20260404130000_storage_logos_bucket.sql` (creates the `logos` bucket and policies).'
-          : msg
+          : /exceeded the maximum|maximum allowed size|too large/i.test(msg)
+            ? `Supabase is rejecting this file size. In Dashboard → SQL, run \`supabase/migrations/20260404140000_storage_logos_file_size_limit.sql\` (sets the logos bucket to ${formatMaxLogoMb()} MB), or shrink the image under ${formatMaxLogoMb()} MB.`
+            : msg
       );
       setUploading(false);
       return;
@@ -121,7 +138,9 @@ export default function SettingsPage() {
                     <span className="material-symbols-outlined text-base">upload</span>
                     {uploading ? 'Uploading…' : 'Upload Logo'}
                   </button>
-                  <p className="text-xs text-on-surface-variant mt-1.5">PNG or JPG, max 2MB. Shown on PDF exports.</p>
+                  <p className="text-xs text-on-surface-variant mt-1.5">
+                    PNG or JPG, max {formatMaxLogoMb()} MB. Shown on PDF exports.
+                  </p>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 </div>
               </div>
