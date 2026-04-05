@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { ensureProfileRowExists } from '../utils/ensureProfile';
 import { useProfile } from '../hooks/useProfile';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
@@ -78,6 +79,15 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
     if (!user) return;
     setSubmitting(true);
     setError('');
+    const ensured = await ensureProfileRowExists(user);
+    if (!ensured.ok) {
+      setSubmitting(false);
+      setError(
+        ensured.error ??
+          'Your account profile is still syncing. Refresh the page and try again, or contact support.'
+      );
+      return;
+    }
     let jobId = selectedJobId;
     if (mode === 'new') {
       const { data, error: jobErr } = await supabase.from('jobs').insert({ user_id: user.id, name: newJobName.trim() }).select().single();

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { ensureProfileRowExists } from '../utils/ensureProfile';
 
 export interface Profile {
   id: string;
@@ -33,16 +34,29 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   fetchProfile: async (userId) => {
     set({ loading: true });
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
+    if (error || !data) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const u = sessionData.session?.user;
+      if (u?.id === userId) {
+        const ensured = await ensureProfileRowExists(u);
+        if (ensured.ok) {
+          const retry = await supabase.from('profiles').select('*').eq('id', userId).single();
+          data = retry.data;
+          error = retry.error;
+        }
+      }
+    }
+
     if (!error && data) {
       set({ profile: data as Profile, loading: false });
     } else {
-      set({ loading: false });
+      set({ profile: null, loading: false });
     }
   },
 

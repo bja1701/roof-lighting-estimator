@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { ensureProfileRowExists } from '../utils/ensureProfile';
 
 interface Props {
   onCreated: (jobId: string) => void;
@@ -21,6 +22,15 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
     if (!name.trim() || !user) return;
     setSubmitting(true);
     setError('');
+    const ensured = await ensureProfileRowExists(user);
+    if (!ensured.ok) {
+      setSubmitting(false);
+      setError(
+        ensured.error ??
+          'Your account profile is still syncing. Refresh the page and try again, or contact support.'
+      );
+      return;
+    }
     const { data, error: err } = await supabase
       .from('jobs')
       .insert({ user_id: user.id, name: name.trim(), address: null })

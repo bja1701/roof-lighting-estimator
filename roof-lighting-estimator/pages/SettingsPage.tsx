@@ -46,7 +46,16 @@ export default function SettingsPage() {
     const ext = file.name.split('.').pop();
     const path = `${user.id}/logo.${ext}`;
     const { error: uploadErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-    if (uploadErr) { setError(uploadErr.message); setUploading(false); return; }
+    if (uploadErr) {
+      const msg = uploadErr.message ?? '';
+      setError(
+        /row-level security|rls/i.test(msg)
+          ? 'Logo upload is blocked by Storage security rules. In Supabase: open SQL Editor and run the migration `supabase/migrations/20260404130000_storage_logos_bucket.sql` (creates the `logos` bucket and policies).'
+          : msg
+      );
+      setUploading(false);
+      return;
+    }
     const { data: urlData } = supabase.storage.from('logos').getPublicUrl(path);
     setLogoUrl(urlData.publicUrl);
     setUploading(false);
