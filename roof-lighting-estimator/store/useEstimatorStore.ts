@@ -1,17 +1,20 @@
 
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { EstimatorState, AppMode, LineType, LatLng } from '../types/index';
+import { EstimatorState, LineType, LatLng } from '../types/index';
 import { calculateDistance, getMultiplierFromPitch } from '../utils/geometry';
 
 interface ExtendedEstimatorState extends EstimatorState {
   // Decoupled Positions
   satelliteCenter: LatLng;
   streetViewPosition: LatLng;
+  /** Human-readable site address from Places search (used when saving a quote → job card / Street View). */
+  estimateSiteAddress: string | null;
 
   // Actions
   setMapCenter: (location: LatLng) => void; // Updates Satellite Only (used by Search)
   setStreetViewPosition: (location: LatLng) => void;
+  setEstimateSiteAddress: (address: string | null) => void;
   syncStreetViewToSatellite: () => void;
   loadProfilePricing: (pricePerFt: number, controllerFee: number, includeController: boolean) => void;
   restoreCanvas: (canvasState: any) => void;
@@ -26,6 +29,7 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   // Default: 1568 E 550 S, Springville, UT
   satelliteCenter: { lat: 40.157588, lng: -111.575344 }, 
   streetViewPosition: { lat: 40.157588, lng: -111.575344 },
+  estimateSiteAddress: null,
 
   // Pricing / Domain
   pricePerFt: 25.0,
@@ -37,7 +41,6 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   totalLength2D: 0,
   totalLength3D: 0,
   estimatedCost: 0,
-  mode: 'manual',
   selectedTool: 'select', // Default to Select Mode
   visualPitchAngle: 26.6, // Default to ~6/12 visual
   isSuperZoom: false,
@@ -52,6 +55,8 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   setStreetViewPosition: (location) => {
     set({ streetViewPosition: location });
   },
+
+  setEstimateSiteAddress: (address) => set({ estimateSiteAddress: address }),
 
   syncStreetViewToSatellite: () => {
     const { satelliteCenter } = get();
@@ -135,8 +140,6 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     get().calculateTotals();
   },
 
-  setMode: (mode: AppMode) => set({ mode }),
-
   setSelectedTool: (tool) => set({ selectedTool: tool }),
 
   setVisualPitchAngle: (angle: number) => {
@@ -163,6 +166,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
       controllerFee: canvasState.controllerFee ?? get().controllerFee,
       includeController: canvasState.includeController ?? get().includeController,
       satelliteCenter: canvasState.satelliteCenter ?? get().satelliteCenter,
+      estimateSiteAddress:
+        canvasState.estimateSiteAddress !== undefined
+          ? canvasState.estimateSiteAddress
+          : get().estimateSiteAddress,
       selectedLineId: null,
       activeDrawNodeId: null,
     });

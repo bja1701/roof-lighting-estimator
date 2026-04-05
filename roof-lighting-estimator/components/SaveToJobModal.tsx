@@ -10,10 +10,41 @@ interface Props { onSaved: () => void; onClose: () => void; }
 const inputCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
 const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
 
+function resolveAddressForJob(
+  formattedFromSearch: string | null,
+  center: { lat: number; lng: number }
+): Promise<string> {
+  if (formattedFromSearch?.trim()) return Promise.resolve(formattedFromSearch.trim());
+  const win = window as any;
+  if (win.google?.maps?.Geocoder) {
+    return new Promise((resolve) => {
+      const geocoder = new win.google.maps.Geocoder();
+      geocoder.geocode({ location: center }, (results: any, status: string) => {
+        if (status === 'OK' && results?.[0]?.formatted_address) {
+          resolve(results[0].formatted_address);
+        } else {
+          resolve(`${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
+        }
+      });
+    });
+  }
+  return Promise.resolve(`${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
+}
+
 export default function SaveToJobModal({ onSaved, onClose }: Props) {
   const { user } = useAuth();
   const { profile, incrementEstimates } = useProfile();
-  const { nodes, lines, totalLength3D, estimatedCost, pricePerFt, controllerFee, includeController, satelliteCenter } = useEstimatorStore();
+  const {
+    nodes,
+    lines,
+    totalLength3D,
+    estimatedCost,
+    pricePerFt,
+    controllerFee,
+    includeController,
+    satelliteCenter,
+    estimateSiteAddress,
+  } = useEstimatorStore();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
@@ -53,7 +84,15 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
       if (jobErr) { setError(jobErr.message); setSubmitting(false); return; }
       jobId = data.id;
     }
-    const canvasState = { nodes, lines, pricePerFt, controllerFee, includeController, satelliteCenter };
+    const canvasState = {
+      nodes,
+      lines,
+      pricePerFt,
+      controllerFee,
+      includeController,
+      satelliteCenter,
+      estimateSiteAddress,
+    };
     const { error: quoteErr } = await supabase.from('quotes').insert({
       job_id: jobId, label: label.trim() || 'Estimate', line_items: buildLineItems(),
       notes: notes.trim() || null, price_per_foot: pricePerFt, controller_fee: controllerFee,
@@ -61,6 +100,11 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
       total_price: estimatedCost, canvas_state: canvasState,
     });
     if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
+
+    const jobAddress = await resolveAddressForJob(estimateSiteAddress, satelliteCenter);
+    const { error: jobAddrErr } = await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
+    if (jobAddrErr) { setError(jobAddrErr.message); setSubmitting(false); return; }
+
     await incrementEstimates();
     setSubmitting(false);
     onSaved();

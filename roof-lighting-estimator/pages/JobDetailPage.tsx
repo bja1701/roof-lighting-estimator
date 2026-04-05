@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfile } from '../hooks/useProfile';
+import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
 
@@ -33,6 +34,7 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { if (id) fetchJobAndQuotes(id); }, [id]);
 
@@ -53,9 +55,35 @@ export default function JobDetailPage() {
     setQuotes(q => q.filter(x => x.id !== quoteId));
   };
 
+  const handleDeleteJob = async () => {
+    if (!job || !id) return;
+    const n = quotes.length;
+    const msg =
+      n === 0
+        ? `Delete job “${job.name}”? This cannot be undone.`
+        : `Delete job “${job.name}” and all ${n} saved estimate${n === 1 ? '' : 's'}? This cannot be undone.`;
+    if (!confirm(msg)) return;
+    setDeleting(true);
+    const { error } = await supabase.from('jobs').delete().eq('id', id);
+    setDeleting(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    navigate('/');
+  };
+
   const handleOpenEstimator = (quote?: Quote) => {
+    if (isFreeTierEstimatorExhausted(profile)) return;
     if (quote?.canvas_state) {
-      sessionStorage.setItem('restore_quote', JSON.stringify({ quoteId: quote.id, jobId: id, canvasState: quote.canvas_state, label: quote.label }));
+      const canvasState = { ...quote.canvas_state };
+      if (job?.address && (canvasState.estimateSiteAddress == null || canvasState.estimateSiteAddress === '')) {
+        canvasState.estimateSiteAddress = job.address;
+      }
+      sessionStorage.setItem(
+        'restore_quote',
+        JSON.stringify({ quoteId: quote.id, jobId: id, canvasState, label: quote.label })
+      );
     } else {
       sessionStorage.setItem('restore_quote', JSON.stringify({ jobId: id }));
     }
@@ -64,7 +92,7 @@ export default function JobDetailPage() {
 
   const totalValue = quotes.reduce((sum, q) => sum + (q.total_price ?? 0), 0);
   const totalFt = quotes.reduce((sum, q) => sum + (q.total_linear_ft ?? 0), 0);
-  const canEstimate = !(profile?.subscription_tier === 'free' && (profile?.estimates_used ?? 0) >= 5);
+  const canEstimate = !isFreeTierEstimatorExhausted(profile);
 
   if (loading) {
     return (
@@ -115,14 +143,26 @@ export default function JobDetailPage() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => handleOpenEstimator()}
-            disabled={!canEstimate}
-            className="amber-gradient text-white font-headline font-bold py-4 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="material-symbols-outlined">add</span>
-            New Estimate
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={handleDeleteJob}
+              disabled={deleting}
+              className="order-2 flex items-center justify-center gap-2 rounded-lg border border-error/40 bg-surface-container-lowest py-3 px-5 font-label text-sm font-bold uppercase tracking-wider text-error transition-colors hover:bg-error-container/20 disabled:opacity-50 sm:order-1"
+            >
+              <span className="material-symbols-outlined text-lg">delete</span>
+              {deleting ? 'Deleting…' : 'Delete job'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenEstimator()}
+              disabled={!canEstimate}
+              className="order-1 amber-gradient flex items-center justify-center gap-3 rounded-lg py-4 px-8 font-headline font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:order-2"
+            >
+              <span className="material-symbols-outlined">add</span>
+              New Estimate
+            </button>
+          </div>
         </div>
 
         {/* Bento stats row */}

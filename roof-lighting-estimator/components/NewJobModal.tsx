@@ -13,7 +13,6 @@ const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wide
 export default function NewJobModal({ onCreated, onClose }: Props) {
   const { user } = useAuth();
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,7 +23,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
     setError('');
     const { data, error: err } = await supabase
       .from('jobs')
-      .insert({ user_id: user.id, name: name.trim(), address: address.trim() || null })
+      .insert({ user_id: user.id, name: name.trim(), address: null })
       .select()
       .single();
     setSubmitting(false);
@@ -55,13 +54,9 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
               <label className={labelCls}>Job Name *</label>
               <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Smith Residence" className={inputCls} />
             </div>
-            <div>
-              <label className={labelCls}>Address</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">location_on</span>
-                <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St, Springville, UT" className={`${inputCls} pl-10`} />
-              </div>
-            </div>
+            <p className="text-xs text-on-surface-variant">
+              Site address is set automatically when you save an estimate from the map (search or map center).
+            </p>
 
             {error && (
               <div className="bg-error-container/30 border-l-4 border-error p-3 rounded-r-lg">

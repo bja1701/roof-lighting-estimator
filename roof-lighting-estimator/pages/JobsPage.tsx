@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { useProfile } from '../hooks/useProfile';
 import SharedLayout from '../components/SharedLayout';
 import NewJobModal from '../components/NewJobModal';
+import { streetViewStaticImageUrl } from '../utils/streetViewStatic';
 
 interface Job {
   id: string;
@@ -25,22 +25,78 @@ function getStatusChip(count: number) {
   return STATUS_COLORS[0];
 }
 
-// Roof image bank — rotate through for visual interest
-const CARD_IMAGES = [
-  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=200&fit=crop',
-  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=200&fit=crop',
-  'https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=400&h=200&fit=crop',
-];
+/** Street View Static thumbnail from job address, or placeholder when missing / unavailable. */
+function JobCardCover({
+  address,
+  jobName,
+  mapsApiKey,
+}: {
+  address: string | null;
+  jobName: string;
+  mapsApiKey: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const url =
+    mapsApiKey && address?.trim()
+      ? streetViewStaticImageUrl({
+          location: address.trim(),
+          apiKey: mapsApiKey,
+          width: 640,
+          height: 360,
+        })
+      : '';
+
+  if (!url || imgFailed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-surface-container-low">
+        <span className="material-symbols-outlined text-5xl text-on-surface-variant/35" aria-hidden>
+          roofing
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt={`Street View near ${jobName}`}
+      className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
+      onError={() => setImgFailed(true)}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
 
 export default function JobsPage() {
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
   const navigate = useNavigate();
-  const { profile } = useProfile();
+  const location = useLocation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewJob, setShowNewJob] = useState(false);
   const [search, setSearch] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [jobPendingDelete, setJobPendingDelete] = useState<Job | null>(null);
+  const [estimateLimitBanner, setEstimateLimitBanner] = useState(false);
 
   useEffect(() => { fetchJobs(); }, []);
+
+  useEffect(() => {
+    const state = location.state as { reason?: string } | null | undefined;
+    if (state?.reason !== 'estimate_limit') return;
+    setEstimateLimitBanner(true);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
+
+  useEffect(() => {
+    if (!jobPendingDelete || deletingId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setJobPendingDelete(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [jobPendingDelete, deletingId]);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -59,41 +115,67 @@ export default function JobsPage() {
     (j.address ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const openDeleteConfirm = (job: Job, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setJobPendingDelete(job);
+  };
+
+  const cancelDeleteConfirm = () => {
+    if (deletingId) return;
+    setJobPendingDelete(null);
+  };
+
+  const confirmDeleteJob = async () => {
+    const job = jobPendingDelete;
+    if (!job) return;
+    setDeletingId(job.id);
+    const { error } = await supabase.from('jobs').delete().eq('id', job.id);
+    setDeletingId(null);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setJobs((list) => list.filter((j) => j.id !== job.id));
+    setJobPendingDelete(null);
+  };
+
   return (
     <SharedLayout>
       <div className="px-6 md:px-10 py-10 max-w-6xl mx-auto">
-        {/* Page header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div>
-            <h1 className="font-headline font-black text-5xl tracking-tight text-on-surface mb-2">Jobs</h1>
-            <p className="text-lg text-on-surface-variant">Manage your active roofing projects, client estimates, and site documentation.</p>
-          </div>
-          <div className="flex flex-col items-end gap-4">
-            {profile?.subscription_tier === 'free' && (
-              <div className="w-64 bg-surface-container rounded-xl p-4 shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-label uppercase tracking-wider text-secondary">Usage Tier</span>
-                  <span className="text-xs font-bold text-on-surface">{profile.estimates_used ?? 0} / 5 estimates</span>
-                </div>
-                <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
-                  <div
-                    className="amber-gradient h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(100, ((profile.estimates_used ?? 0) / 5) * 100)}%` }}
-                  />
-                </div>
-                {(profile.estimates_used ?? 0) >= 5 && (
-                  <p className="text-[10px] text-error mt-2 font-medium">Limit reached — contact us to upgrade</p>
-                )}
-              </div>
-            )}
+        {estimateLimitBanner && (
+          <div
+            role="status"
+            className="mb-6 flex flex-col gap-3 rounded-xl border border-outline-variant/20 bg-tertiary-container/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p className="text-sm text-on-surface">
+              You&apos;ve used all <strong>5</strong> free estimates. The estimator is locked until you upgrade your plan.
+            </p>
             <button
-              onClick={() => setShowNewJob(true)}
-              className="amber-gradient text-white font-headline font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 active:scale-95 transition-all"
+              type="button"
+              onClick={() => setEstimateLimitBanner(false)}
+              className="shrink-0 rounded-lg bg-surface-container-lowest px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-low"
             >
-              <span className="material-symbols-outlined text-xl">add</span>
-              New Job
+              Dismiss
             </button>
           </div>
+        )}
+        {/* Page header */}
+        <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="mb-2 font-headline text-5xl font-black tracking-tight text-on-surface">Jobs</h1>
+            <p className="max-w-2xl text-lg text-on-surface-variant">
+              Manage your active roofing projects, client estimates, and site documentation.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowNewJob(true)}
+            className="amber-gradient flex shrink-0 items-center gap-2 self-start rounded-lg py-3 px-6 font-headline font-bold text-white shadow-md transition-all active:scale-95 sm:self-center"
+          >
+            <span className="material-symbols-outlined text-xl">add</span>
+            New Job
+          </button>
         </div>
 
         {/* Search + filter bar */}
@@ -139,7 +221,7 @@ export default function JobsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filtered.map((job, idx) => {
+            {filtered.map((job) => {
               const chip = getStatusChip(job.quote_count ?? 0);
               return (
                 <div
@@ -147,15 +229,23 @@ export default function JobsPage() {
                   className="group bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-outline-variant/10 cursor-pointer"
                   onClick={() => navigate(`/jobs/${job.id}`)}
                 >
-                  {/* Image header */}
-                  <div className="h-32 w-full overflow-hidden relative bg-surface-container-low">
-                    <img
-                      src={CARD_IMAGES[idx % CARD_IMAGES.length]}
-                      alt={job.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${chip.cls}`}>
+                  <div className="relative h-32 w-full overflow-hidden bg-surface-container-low">
+                    <JobCardCover address={job.address} jobName={job.name} mapsApiKey={mapsApiKey} />
+                    <button
+                      type="button"
+                      aria-label={`Delete job ${job.name}`}
+                      disabled={deletingId === job.id}
+                      onClick={(e) => openDeleteConfirm(job, e)}
+                      className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/30 bg-white/95 text-error opacity-0 shadow-sm backdrop-blur-sm pointer-events-none transition-all duration-200 hover:bg-error-container/25 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error disabled:pointer-events-none"
+                      title="Delete job"
+                    >
+                      <span
+                        className={`material-symbols-outlined text-xl ${deletingId === job.id ? 'animate-spin' : ''}`}
+                      >
+                        {deletingId === job.id ? 'progress_activity' : 'delete'}
+                      </span>
+                    </button>
+                    <div className={`absolute top-3 right-3 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${chip.cls}`}>
                       {chip.label}
                     </div>
                   </div>
@@ -197,6 +287,68 @@ export default function JobsPage() {
           onCreated={(jobId) => { setShowNewJob(false); fetchJobs(); navigate(`/jobs/${jobId}`); }}
           onClose={() => setShowNewJob(false)}
         />
+      )}
+
+      {jobPendingDelete && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-inverse-surface/70 px-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-job-title"
+          onClick={(e) => e.target === e.currentTarget && cancelDeleteConfirm()}
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0px_20px_40px_rgba(17,28,45,0.15)]">
+            <div className="h-1 w-full bg-error" />
+            <div className="p-7">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-error-container/40">
+                  <span className="material-symbols-outlined text-error text-2xl">delete_forever</span>
+                </div>
+                <h2 id="delete-job-title" className="font-headline text-xl font-bold text-on-surface">
+                  Delete job?
+                </h2>
+              </div>
+              <p className="mb-2 text-on-surface-variant">
+                <span className="font-semibold text-on-surface">“{jobPendingDelete.name}”</span> will be removed permanently.
+              </p>
+              {(jobPendingDelete.quote_count ?? 0) > 0 && (
+                <p className="mb-6 text-sm text-error">
+                  This also deletes {jobPendingDelete.quote_count} saved estimate
+                  {(jobPendingDelete.quote_count ?? 0) === 1 ? '' : 's'}.
+                </p>
+              )}
+              {(jobPendingDelete.quote_count ?? 0) === 0 && <p className="mb-6 text-sm text-on-surface-variant">This cannot be undone.</p>}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={cancelDeleteConfirm}
+                  disabled={!!deletingId}
+                  className="flex-1 rounded-lg bg-surface-container-low py-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmDeleteJob()}
+                  disabled={!!deletingId}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-error/50 bg-error py-3 text-sm font-headline font-bold text-white transition-colors hover:bg-error/90 disabled:opacity-50"
+                >
+                  {deletingId ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                      Deleting…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-lg">delete</span>
+                      Delete job
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </SharedLayout>
   );

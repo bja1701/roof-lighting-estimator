@@ -1,10 +1,30 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { calculateDistance, getMultiplierFromPitch } from '../utils/geometry';
 import { getColorForPitch } from '../utils/pitchColors';
 
-const PricingPanel: React.FC = () => {
+const VIEWPORT_PAD = 8;
+
+function clampToViewport(
+  x: number,
+  y: number,
+  panelW: number,
+  panelH: number
+): { x: number; y: number } {
+  const maxX = Math.max(VIEWPORT_PAD, window.innerWidth - panelW - VIEWPORT_PAD);
+  const maxY = Math.max(VIEWPORT_PAD, window.innerHeight - panelH - VIEWPORT_PAD);
+  return {
+    x: Math.min(Math.max(VIEWPORT_PAD, x), maxX),
+    y: Math.min(Math.max(VIEWPORT_PAD, y), maxY),
+  };
+}
+
+interface PricingPanelProps {
+  /** Right-hand pane (Street View / pitch tool); used to place the default top-left position. */
+  dockRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const PricingPanel: React.FC<PricingPanelProps> = ({ dockRef }) => {
   const { 
     lines, 
     nodes, 
@@ -20,65 +40,161 @@ const PricingPanel: React.FC = () => {
   } = useEstimatorStore();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [pos, setPos] = useState({ x: VIEWPORT_PAD, y: VIEWPORT_PAD });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef(pos);
+  posRef.current = pos;
+
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+  } | null>(null);
+
+  const applyDefaultFromDock = useCallback(() => {
+    const dock = dockRef.current;
+    const el = panelRef.current;
+    if (!dock) return;
+    const r = dock.getBoundingClientRect();
+    const w = el?.offsetWidth ?? 340;
+    const h = el?.offsetHeight ?? 76;
+    const next = clampToViewport(r.left + 16, r.top + 16, w, h);
+    setPos(next);
+  }, [dockRef]);
+
+  useLayoutEffect(() => {
+    applyDefaultFromDock();
+    const id = requestAnimationFrame(() => applyDefaultFromDock());
+    return () => cancelAnimationFrame(id);
+  }, [applyDefaultFromDock]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const el = panelRef.current;
+      if (!el) return;
+      setPos((p) => clampToViewport(p.x, p.y, el.offsetWidth, el.offsetHeight));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d || e.pointerId !== d.pointerId) return;
+      const el = panelRef.current;
+      const w = el?.offsetWidth ?? 340;
+      const h = el?.offsetHeight ?? 76;
+      const nx = d.origX + (e.clientX - d.startX);
+      const ny = d.origY + (e.clientY - d.startY);
+      setPos(clampToViewport(nx, ny, w, h));
+    };
+    const endDrag = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (d && e.pointerId === d.pointerId) dragRef.current = null;
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+    };
+  }, []);
+
+  const onDragHandleDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: posRef.current.x,
+      origY: posRef.current.y,
+    };
+  };
 
   return (
     <>
-      {/* 
-         1. COMPACT BAR
-         Positioned to straddle the line between Satellite and Street View on large screens.
-         lg:right-0 lg:translate-x-1/2 centers the component on the right edge of its parent.
-      */}
-      <div className="absolute bottom-6 right-4 z-[60]">
-        <div className="glass-panel border border-white/30 rounded-xl shadow-[0px_20px_40px_rgba(17,28,45,0.12)] flex items-center p-3 gap-4 transition-all hover:scale-[1.02] duration-200">
+      {/* Floating pricing bar: default top-left of Street View pane; draggable (handle) anywhere on screen */}
+      <div
+        ref={panelRef}
+        className="fixed z-[60] max-w-[calc(100vw-16px)]"
+        style={{ left: pos.x, top: pos.y }}
+      >
+        <div className="flex items-stretch gap-0 rounded-xl border border-inverse-on-surface/20 bg-inverse-surface shadow-[0_20px_40px_rgba(17,28,45,0.4)] transition-shadow duration-200">
+          <button
+            type="button"
+            onPointerDown={onDragHandleDown}
+            className="flex flex-col items-center justify-center px-2 py-2 rounded-l-[11px] border-r border-inverse-on-surface/20 text-inverse-on-surface/45 hover:bg-inverse-on-surface/10 hover:text-inverse-on-surface cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+            title="Drag panel"
+            aria-label="Drag pricing panel"
+          >
+            <svg width="10" height="18" viewBox="0 0 10 18" fill="currentColor" aria-hidden className="opacity-80">
+              <circle cx="2" cy="3" r="1.25" />
+              <circle cx="8" cy="3" r="1.25" />
+              <circle cx="2" cy="9" r="1.25" />
+              <circle cx="8" cy="9" r="1.25" />
+              <circle cx="2" cy="15" r="1.25" />
+              <circle cx="8" cy="15" r="1.25" />
+            </svg>
+          </button>
 
+          <div className="flex items-center p-3 gap-4 min-w-0 flex-1">
             {/* Cost Display */}
             <div className="flex flex-col items-end pl-2">
-                <div className="text-2xl font-headline font-black text-primary-container leading-none tracking-tight">
+                <div className="text-2xl font-headline font-black text-amber-300 leading-none tracking-tight">
                     ${estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
-                <div className="text-xs font-semibold text-on-surface-variant">
+                <div className="text-xs font-semibold text-inverse-on-surface/60">
                     {totalLength3D.toFixed(0)} ft
                 </div>
             </div>
 
-            <div className="w-px h-10 bg-outline-variant/30"></div>
+            <div className="h-10 w-px bg-inverse-on-surface/20" />
 
             {/* Price Input */}
             <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase text-on-surface-variant font-bold tracking-wider">Price / Ft</label>
-                <div className="flex items-center bg-surface-container-lowest rounded-lg px-2 border border-outline-variant/30 hover:border-primary-container transition-colors w-20">
-                    <span className="text-on-surface-variant text-xs">$</span>
+                <label className="text-[9px] font-bold uppercase tracking-wider text-inverse-on-surface/55">Price / Ft</label>
+                <div className="flex w-20 items-center rounded-lg border border-inverse-on-surface/25 bg-inverse-on-surface/10 px-2 transition-colors hover:border-inverse-on-surface/35">
+                    <span className="text-xs text-inverse-on-surface/55">$</span>
                     <input
                         type="number"
                         value={pricePerFt}
                         onChange={(e) => setPricePerFt(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-transparent text-on-surface text-sm font-body focus:outline-none text-right py-1"
+                        className="w-full bg-transparent py-1 text-right text-sm font-body text-inverse-on-surface focus:outline-none"
                     />
                 </div>
             </div>
 
             {/* Controller Toggle */}
             <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase text-on-surface-variant font-bold tracking-wider">Control</label>
+                <label className="text-[9px] font-bold uppercase tracking-wider text-inverse-on-surface/55">Control</label>
                 <button
+                    type="button"
                     onClick={toggleController}
                     title={`Controller Fee: $${controllerFee}`}
-                    className={`h-[26px] w-9 rounded-lg flex items-center justify-center border transition-all ${
+                    className={`flex h-[26px] w-9 items-center justify-center rounded-lg border transition-all ${
                         includeController
-                        ? 'bg-tertiary border-tertiary text-white shadow-sm'
-                        : 'bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                        : 'border-inverse-on-surface/25 bg-inverse-on-surface/10 text-inverse-on-surface/55 hover:border-inverse-on-surface/35 hover:text-inverse-on-surface'
                     }`}
                 >
-                    <div className={`w-2 h-2 rounded-full transition-all duration-300 ${includeController ? 'bg-white' : 'bg-outline'}`}></div>
+                    <div className={`h-2 w-2 rounded-full transition-all duration-300 ${includeController ? 'bg-white' : 'bg-inverse-on-surface/45'}`}></div>
                 </button>
             </div>
 
-            <div className="w-px h-10 bg-outline-variant/30"></div>
+            <div className="h-10 w-px bg-inverse-on-surface/20" />
 
             {/* Expand / Details Button */}
             <button
+                type="button"
                 onClick={() => setIsDrawerOpen(true)}
-                className="p-2.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+                className="rounded-lg p-2.5 text-inverse-on-surface/55 transition-colors hover:bg-inverse-on-surface/10 hover:text-inverse-on-surface active:scale-95"
                 title="View Breakdown"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -90,17 +206,16 @@ const PricingPanel: React.FC = () => {
                     <line x1="3" y1="18" x2="3.01" y2="18"></line>
                 </svg>
             </button>
+          </div>
         </div>
       </div>
 
-
-      {/* 
-         2. SLIDE-OUT DRAWER (Sidebar)
-         Full height on the left side.
-      */}
-      <div className={`absolute top-0 left-0 h-full w-[300px] bg-surface-container-lowest border-r border-outline-variant/20 shadow-[0px_20px_40px_rgba(17,28,45,0.08)] z-[70] transform transition-transform duration-300 ease-out flex flex-col ${
+      {/* Breakdown drawer: fixed below estimator header */}
+      <div
+        className={`fixed top-14 left-0 bottom-0 w-[min(100vw,300px)] max-w-full bg-surface-container-lowest border-r border-outline-variant/20 shadow-[0px_20px_40px_rgba(17,28,45,0.08)] z-[80] transform transition-transform duration-300 ease-out flex flex-col ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+        }`}
+      >
 
         {/* Drawer Header */}
         <div className="flex items-center justify-between p-4 border-b border-outline-variant/20 bg-surface-container-low">

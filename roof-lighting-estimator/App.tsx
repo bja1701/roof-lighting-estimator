@@ -5,7 +5,7 @@ import { useProfile } from './hooks/useProfile';
 import AuthPage from './pages/AuthPage';
 import JobsPage from './pages/JobsPage';
 import JobDetailPage from './pages/JobDetailPage';
-import EstimatorPage from './pages/EstimatorPage';
+import EstimatorRouteGuard from './components/EstimatorRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import WelcomeModal from './components/WelcomeModal';
@@ -56,7 +56,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<JobsPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
-        <Route path="/estimator" element={<EstimatorPage />} />
+        <Route path="/estimator" element={<EstimatorRouteGuard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

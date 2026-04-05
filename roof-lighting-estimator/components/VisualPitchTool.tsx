@@ -150,7 +150,7 @@ const VisualPitchTool: React.FC = () => {
 
   return (
     <div 
-      className="w-full h-full flex flex-col bg-slate-900 border-l border-slate-700 select-none"
+      className="flex h-full w-full flex-col select-none border-l border-inverse-on-surface/15 bg-inverse-surface"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       // We bind mouse move to the root so you can drag slightly outside the visual area without losing grip
@@ -194,24 +194,24 @@ const VisualPitchTool: React.FC = () => {
              <circle r="25" fill="transparent" />
              
              {/* Visible Circle */}
-             <circle r="8" fill="white" stroke="#0f172a" strokeWidth="2" className="shadow-xl" />
+             <circle r="8" fill="white" stroke="#263143" strokeWidth="2" className="shadow-xl" />
              
              {/* Crosshair Center */}
-             <line x1="-4" y1="0" x2="4" y2="0" stroke="#0f172a" strokeWidth="1" />
-             <line x1="0" y1="-4" x2="0" y2="4" stroke="#0f172a" strokeWidth="1" />
+             <line x1="-4" y1="0" x2="4" y2="0" stroke="#263143" strokeWidth="1" />
+             <line x1="0" y1="-4" x2="0" y2="4" stroke="#263143" strokeWidth="1" />
           </g>
         </svg>
 
         {/* Result Overlay */}
-        <div className="absolute top-4 right-4 z-20 bg-black/80 backdrop-blur-md border border-slate-600 rounded-lg p-3 text-right shadow-2xl min-w-[140px]">
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Measured Pitch</div>
-            <div className="text-3xl font-bold text-white font-mono">{calculatedPitch}</div>
-            <div className="text-sm text-blue-400">{diff.toFixed(1)}°</div>
+        <div className="absolute right-4 top-4 z-20 min-w-[140px] rounded-lg border border-inverse-on-surface/20 bg-inverse-surface/95 p-3 text-right shadow-2xl backdrop-blur-md">
+            <div className="mb-1 text-[10px] uppercase tracking-wider text-inverse-on-surface/55">Measured Pitch</div>
+            <div className="font-mono text-3xl font-bold text-inverse-on-surface">{calculatedPitch}</div>
+            <div className="text-sm text-tertiary-fixed-dim">{diff.toFixed(1)}°</div>
         </div>
       </div>
 
       {/* 3. Controls Area (Sliders) */}
-      <div className="h-auto bg-slate-800 border-t border-slate-700 p-4 flex flex-col gap-4 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] relative z-30">
+      <div className="relative z-30 flex h-auto flex-col gap-4 border-t border-inverse-on-surface/15 bg-inverse-surface p-4 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
         
         {/* Sliders Grid */}
         <div className="grid grid-cols-1 gap-4">
@@ -226,7 +226,7 @@ const VisualPitchTool: React.FC = () => {
                     type="range" min="0" max="180" step="0.5"
                     value={refAngle}
                     onChange={(e) => setRefAngle(parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-yellow-400"
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-inverse-on-surface/25 accent-yellow-400"
                 />
             </div>
 
@@ -240,20 +240,20 @@ const VisualPitchTool: React.FC = () => {
                     type="range" min="0" max="180" step="0.5"
                     value={slopeAngle}
                     onChange={(e) => setSlopeAngle(parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-red-500"
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-inverse-on-surface/25 accent-red-500"
                 />
             </div>
         </div>
 
-        <div className="border-t border-slate-700 my-1"></div>
+        <div className="my-1 border-t border-inverse-on-surface/15" />
 
         {/* Apply Button */}
         <div className="flex justify-between items-center gap-4">
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-inverse-on-surface/60">
                 {selectedLine ? (
-                    <span>Apply to <span className="text-cyan-400 font-bold">Line {selectedLine.id.slice(0,4)}</span></span>
+                    <span>Apply to <span className="font-bold text-tertiary-fixed-dim">Line {selectedLine.id.slice(0,4)}</span></span>
                 ) : (
-                    <span className="italic opacity-50">Select a line on map to apply</span>
+                    <span className="italic text-inverse-on-surface/40">Select a line on map to apply</span>
                 )}
             </div>
 
@@ -261,10 +261,10 @@ const VisualPitchTool: React.FC = () => {
                 disabled={!selectedLineId}
                 onClick={handleApplyPitch}
                 className={`
-                    flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wide transition-all shadow-md
+                    flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wide shadow-md transition-all
                     ${selectedLineId 
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white' 
-                        : 'bg-slate-700 text-slate-500 cursor-not-allowed'}
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400' 
+                        : 'cursor-not-allowed bg-inverse-on-surface/10 text-inverse-on-surface/35'}
                 `}
             >
                 Apply {calculatedPitch}

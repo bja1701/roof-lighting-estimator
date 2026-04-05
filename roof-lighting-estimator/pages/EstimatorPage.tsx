@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { useProfile } from '../hooks/useProfile';
-import { useAuth } from '../hooks/useAuth';
 import MapWrapper from '../components/MapWrapper';
 import SatelliteCanvas from '../components/SatelliteCanvas';
 import VisualPitchTool from '../components/VisualPitchTool';
@@ -13,16 +12,14 @@ import SaveToJobModal from '../components/SaveToJobModal';
 
 const EstimatorPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
   const { profile } = useProfile();
-  const mode = useEstimatorStore((s) => s.mode);
-  const setMode = useEstimatorStore((s) => s.setMode);
   const reset = useEstimatorStore((s) => s.reset);
   const loadProfilePricing = useEstimatorStore((s) => s.loadProfilePricing);
   const restoreCanvas = useEstimatorStore((s) => s.restoreCanvas);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
+  const pitchPaneRef = useRef<HTMLDivElement>(null);
 
   // Load profile pricing into estimator on mount
   useEffect(() => {
@@ -57,52 +54,34 @@ const EstimatorPage: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen bg-surface text-on-surface font-body overflow-hidden">
       <MapWrapper>
-        {/* Top Bar — Stitch frosted glass style */}
-        <header className="h-14 flex-none bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-between px-4 z-50 shadow-sm relative">
-          {/* Logo + Back */}
-          <div className="flex items-center gap-3 w-[220px] flex-none">
+        <header className="h-14 flex-none bg-inverse-surface border-b border-inverse-on-surface/15 flex items-center justify-between px-4 z-50 shadow-sm relative">
+          <div className="flex items-center gap-3 w-[220px] flex-none min-w-0">
             <button
               onClick={() => navigate('/')}
-              className="text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center gap-1"
+              className="text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors p-1 flex items-center gap-1 shrink-0"
               title="Back to Jobs"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
             </button>
-            <div className="w-6 h-6 amber-gradient rounded shadow-md flex-none"></div>
-            <h1 className="hidden md:block text-sm font-headline font-bold text-on-surface whitespace-nowrap tracking-tight">
+            <div className="w-6 h-6 amber-gradient rounded-md shadow-md flex items-center justify-center flex-shrink-0">
+              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
+                <rect x="9" y="14" width="6" height="6" rx="0.5" />
+              </svg>
+            </div>
+            <h1 className="hidden md:block text-sm font-headline font-bold text-inverse-on-surface whitespace-nowrap tracking-tight truncate">
               Roof Estimator
             </h1>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex-1 flex justify-center px-4 max-w-xl">
+          <div className="flex-1 flex justify-center px-4 max-w-xl min-w-0">
             <SearchBar />
           </div>
 
-          {/* Controls */}
-          <div className="flex gap-2 w-auto justify-end items-center">
-            <div className="hidden md:flex bg-surface-container-low p-0.5 rounded-lg">
-              <button
-                onClick={() => setMode('manual')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  mode === 'manual' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Manual
-              </button>
-              <button
-                onClick={() => setMode('solar')}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  mode === 'solar' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Solar
-              </button>
-            </div>
-
+          <div className="flex gap-2 w-auto justify-end items-center shrink-0">
             <button
               onClick={reset}
-              className="px-3 py-1 text-xs font-medium text-error hover:bg-error-container/30 rounded-lg transition-colors"
+              className="px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
             >
               Clear
             </button>
@@ -120,13 +99,16 @@ const EstimatorPage: React.FC = () => {
         {/* Main Workspace */}
         <main className="flex-1 flex overflow-hidden relative z-0">
           <div className="w-full h-full flex flex-col lg:flex-row">
-            <div className="order-1 flex-1 relative border-r border-slate-800 group min-w-[300px]">
+            <div className="order-1 group relative min-w-[300px] flex-1 border-r border-inverse-on-surface/15">
               <SatelliteCanvas />
               <EditorToolbar />
-              <PricingPanel />
             </div>
-            <div className="order-2 h-[40vh] lg:h-full flex-[1.8] min-w-[300px] z-10 shadow-2xl relative">
+            <div
+              ref={pitchPaneRef}
+              className="order-2 h-[40vh] lg:h-full flex-[1.8] min-w-[300px] z-10 shadow-2xl relative"
+            >
               <VisualPitchTool />
+              <PricingPanel dockRef={pitchPaneRef} />
             </div>
           </div>
         </main>

@@ -189,10 +189,15 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={includeController}
                   onClick={() => setIncludeController(!includeController)}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${includeController ? 'bg-primary-container' : 'bg-surface-container-high'}`}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-white ${includeController ? 'bg-primary-container' : 'bg-surface-container-high'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${includeController ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                  <span
+                    className={`pointer-events-none absolute left-0.5 top-0.5 block h-5 w-5 rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200 ease-out ${includeController ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
                 </button>
                 <span className="text-sm text-on-surface">Include controller by default</span>
               </div>

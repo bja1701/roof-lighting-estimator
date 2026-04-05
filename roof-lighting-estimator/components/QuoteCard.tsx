@@ -1,5 +1,6 @@
 import React from 'react';
 import { Profile } from '../hooks/useProfile';
+import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 
 interface Quote {
   id: string;
@@ -29,6 +30,8 @@ interface Props {
 }
 
 export default function QuoteCard({ quote, job, profile, onDelete, onEdit }: Props) {
+  const estimatorLocked = isFreeTierEstimatorExhausted(profile);
+
   const handlePrint = () => {
     const lineItemsHtml = (quote.line_items ?? []).map((item: any) => `
       <tr>
@@ -72,9 +75,15 @@ export default function QuoteCard({ quote, job, profile, onDelete, onEdit }: Pro
           {/* Action icons — fade in on hover */}
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
+              type="button"
               onClick={onEdit}
-              className="p-2 hover:bg-surface-container-high rounded-lg text-on-surface-variant hover:text-primary-container transition-colors"
-              title="Edit in estimator"
+              disabled={estimatorLocked}
+              className="p-2 rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary-container disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant"
+              title={
+                estimatorLocked
+                  ? 'Free estimate limit reached (5/5). Upgrade to edit in the estimator.'
+                  : 'Edit in estimator'
+              }
             >
               <span className="material-symbols-outlined text-sm">edit</span>
             </button>

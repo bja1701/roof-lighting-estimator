@@ -38,8 +38,6 @@ export interface SolarData {
   };
 }
 
-export type AppMode = 'manual' | 'solar';
-
 export interface EstimatorState {
   // Domain Data
   nodes: RoofNode[];
@@ -57,7 +55,6 @@ export interface EstimatorState {
   estimatedCost: number; // Dollars
   
   // Application State
-  mode: AppMode;
   selectedTool: 'draw' | 'select';
   visualPitchAngle: number; // Degrees measured in Street View (Tool state)
   isSuperZoom: boolean;
@@ -75,7 +72,6 @@ export interface EstimatorState {
   setActiveDrawNode: (id: string | null) => void;
   updateLinePitch: (id: string, pitch: string) => void;
   
-  setMode: (mode: AppMode) => void;
   setSelectedTool: (tool: 'draw' | 'select') => void;
   setVisualPitchAngle: (angle: number) => void;
   toggleSuperZoom: () => void;
