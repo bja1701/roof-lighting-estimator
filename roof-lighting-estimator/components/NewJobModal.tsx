@@ -14,6 +14,9 @@ const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wide
 export default function NewJobModal({ onCreated, onClose }: Props) {
   const { user } = useAuth();
   const [name, setName] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,7 +36,14 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
     }
     const { data, error: err } = await supabase
       .from('jobs')
-      .insert({ user_id: user.id, name: name.trim(), address: null })
+      .insert({
+        user_id: user.id,
+        name: name.trim(),
+        address: null,
+        client_name: clientName.trim() || null,
+        client_email: clientEmail.trim() || null,
+        client_phone: clientPhone.trim() || null,
+      })
       .select()
       .single();
     setSubmitting(false);
@@ -64,8 +74,27 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
               <label className={labelCls}>Job Name *</label>
               <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Smith Residence" className={inputCls} />
             </div>
+
+            <div className="border-t border-outline-variant/20 pt-4">
+              <p className="text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-3">Client Info (Optional)</p>
+              <div className="space-y-4">
+                <div>
+                  <label className={labelCls}>Client Name</label>
+                  <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="John Smith" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Client Email</label>
+                  <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="john@example.com" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Client Phone</label>
+                  <input type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="(208) 555-0123" className={inputCls} />
+                </div>
+              </div>
+            </div>
+
             <p className="text-xs text-on-surface-variant">
-              Site address is set automatically when you save an estimate from the map (search or map center).
+              Site address is set automatically when you save an estimate from the map.
             </p>
 
             {error && (
