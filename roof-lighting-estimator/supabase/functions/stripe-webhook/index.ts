@@ -10,7 +10,7 @@ serve(async (req) => {
     return new Response("No stripe-signature header", { status: 400 });
   }
 
-  const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+  const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_SANDBOX_KEY")!, {
     apiVersion: "2024-04-10",
   });
 
