@@ -1,11 +1,19 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import { useProfile } from '../hooks/useProfile';
+import { useUpgradeModal } from '../hooks/useUpgradeModal';
 import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import EstimatorPage from '../pages/EstimatorPage';
 
 export default function EstimatorRouteGuard() {
   const { profile, loading } = useProfile();
+  const { open } = useUpgradeModal();
+  const exhausted = isFreeTierEstimatorExhausted(profile);
+
+  useEffect(() => {
+    if (!loading && exhausted) {
+      open();
+    }
+  }, [loading, exhausted]);
 
   if (loading) {
     return (
@@ -13,10 +21,6 @@ export default function EstimatorRouteGuard() {
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
       </div>
     );
-  }
-
-  if (isFreeTierEstimatorExhausted(profile)) {
-    return <Navigate to="/" replace state={{ reason: 'estimate_limit' }} />;
   }
 
   return <EstimatorPage />;

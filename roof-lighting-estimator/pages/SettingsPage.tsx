@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
+import { useUpgradeModal } from '../hooks/useUpgradeModal';
 import SharedLayout from '../components/SharedLayout';
 
 const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
@@ -17,7 +18,10 @@ function formatMaxLogoMb() {
 export default function SettingsPage() {
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
+  const { open: openUpgrade } = useUpgradeModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const upgradeSuccess = new URLSearchParams(window.location.search).get('upgrade') === 'success';
 
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -229,6 +233,47 @@ export default function SettingsPage() {
                 </button>
                 <span className="text-sm text-on-surface">Include controller by default</span>
               </div>
+            </div>
+          </section>
+
+          {/* Plan & Billing */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-primary-container/10 rounded-lg flex items-center justify-content">
+                <span className="material-symbols-outlined text-primary-container text-base">workspace_premium</span>
+              </div>
+              <div>
+                <h2 className="font-headline font-bold text-on-surface">Plan & Billing</h2>
+                <p className="text-xs text-on-surface-variant">Your current subscription</p>
+              </div>
+            </div>
+
+            {upgradeSuccess && (
+              <div className="mb-4 flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                You're now on Pro — unlimited estimates unlocked!
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-on-surface">
+                  {profile?.subscription_status === 'active' ? 'Pro' : 'Free'} Plan
+                </div>
+                <div className="text-xs text-on-surface-variant mt-0.5">
+                  {profile?.subscription_status === 'active'
+                    ? 'Unlimited estimates · $89/month'
+                    : `${profile?.estimates_used ?? 0} of 5 free estimates used`}
+                </div>
+              </div>
+              {profile?.subscription_status !== 'active' && (
+                <button
+                  onClick={openUpgrade}
+                  className="px-5 py-2.5 amber-gradient text-white font-semibold text-sm rounded-lg shadow-sm active:scale-95 transition-all"
+                >
+                  Upgrade Plan
+                </button>
+              )}
             </div>
           </section>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useProfile } from '../hooks/useProfile';
+import { useUpgradeModal } from '../hooks/useUpgradeModal';
 
 interface Props {
   onClose: () => void;
@@ -7,6 +8,7 @@ interface Props {
 
 export default function WelcomeModal({ onClose }: Props) {
   const { markWelcomeShown } = useProfile();
+  const { open: openUpgrade } = useUpgradeModal();
 
   const handleClose = async () => {
     await markWelcomeShown();
@@ -57,6 +59,17 @@ export default function WelcomeModal({ onClose }: Props) {
           >
             Let's go
           </button>
+
+          <p className="text-xs text-on-surface-variant/60 mt-4">
+            You have 5 free estimates.{' '}
+            <button
+              onClick={() => { handleClose(); openUpgrade(); }}
+              className="text-amber-500 hover:text-amber-400 underline underline-offset-2 transition-colors"
+            >
+              Upgrade anytime
+            </button>
+            {' '}for unlimited access.
+          </p>
         </div>
 
         {/* Decorative corners */}

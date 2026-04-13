@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
+import { useUpgradeModal } from '../hooks/useUpgradeModal';
 import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 
 interface Props {
@@ -50,6 +51,7 @@ export default function SharedLayout({ children }: Props) {
   const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useProfile();
+  const { open: openUpgrade } = useUpgradeModal();
   const estimatorLocked = isFreeTierEstimatorExhausted(profile);
 
   const isActive = (path: string) => {
@@ -150,7 +152,7 @@ export default function SharedLayout({ children }: Props) {
         </nav>
 
         {/* Bottom: free tier usage (when applicable) */}
-        {profile?.subscription_tier === 'free' && (
+        {profile?.subscription_status !== 'active' && (
           <div className="px-4 pb-6 pt-4 border-t border-slate-200/60 mt-auto">
             <div className="bg-surface-container rounded-xl p-3">
               <div className="flex justify-between items-center mb-2">
@@ -163,6 +165,12 @@ export default function SharedLayout({ children }: Props) {
                   style={{ width: `${Math.min(100, ((profile.estimates_used ?? 0) / 5) * 100)}%` }}
                 />
               </div>
+              <button
+                onClick={openUpgrade}
+                className="mt-3 w-full text-center text-[10px] font-bold text-amber-500 hover:text-amber-400 transition-colors uppercase tracking-wider"
+              >
+                Upgrade →
+              </button>
             </div>
           </div>
         )}

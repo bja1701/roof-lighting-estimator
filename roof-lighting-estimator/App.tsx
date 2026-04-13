@@ -9,6 +9,7 @@ import EstimatorRouteGuard from './components/EstimatorRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import WelcomeModal from './components/WelcomeModal';
+import UpgradeModal from './components/UpgradeModal';
 import FeedbackButton from './components/FeedbackButton';
 
 function AppRoutes() {
@@ -64,6 +65,7 @@ function AppRoutes() {
 
       {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
       <FeedbackButton />
+      <UpgradeModal />
     </>
   );
 }
