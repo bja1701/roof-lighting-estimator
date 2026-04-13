@@ -1,7 +1,11 @@
 import type { Profile } from '../hooks/useProfile';
 
-/** Free tier users who have saved 5 estimates cannot use the estimator (map, pricing, saves). */
+/**
+ * Returns true when the user cannot start a new estimate:
+ * they are not on an active paid subscription AND have used all 5 free estimates.
+ */
 export function isFreeTierEstimatorExhausted(profile: Profile | null | undefined): boolean {
   if (!profile) return false;
-  return profile.subscription_tier === 'free' && (profile.estimates_used ?? 0) >= 5;
+  if (profile.subscription_status === 'active') return false;
+  return (profile.estimates_used ?? 0) >= 5;
 }

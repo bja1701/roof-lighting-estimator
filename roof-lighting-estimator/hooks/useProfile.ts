@@ -14,6 +14,9 @@ export interface Profile {
   controller_fee: number;
   include_controller: boolean;
   subscription_tier: 'free' | 'retainer' | 'paid';
+  subscription_status: 'free' | 'active' | 'canceled';
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   estimates_used: number;
   welcome_shown: boolean;
   role: 'user' | 'admin';
