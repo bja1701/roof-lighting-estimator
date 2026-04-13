@@ -4,26 +4,8 @@ import { supabase } from '../lib/supabase';
 import SharedLayout from '../components/SharedLayout';
 import NewJobModal from '../components/NewJobModal';
 import { streetViewStaticImageUrl } from '../utils/streetViewStatic';
-
-interface Job {
-  id: string;
-  name: string;
-  address: string | null;
-  notes: string | null;
-  created_at: string;
-  quote_count?: number;
-}
-
-const STATUS_COLORS: Record<number, { label: string; cls: string }> = {
-  0: { label: 'No Estimates', cls: 'bg-surface-container text-on-surface-variant' },
-  1: { label: 'In Progress', cls: 'bg-secondary-container text-on-secondary-container' },
-};
-
-function getStatusChip(count: number) {
-  if (count === 0) return STATUS_COLORS[0];
-  if (count >= 1) return { label: `${count} Estimate${count > 1 ? 's' : ''}`, cls: 'bg-tertiary-container/30 text-tertiary' };
-  return STATUS_COLORS[0];
-}
+import JobStatusBadge from '../components/JobStatusBadge';
+import { Job } from '../types/job';
 
 /** Street View Static thumbnail from job address, or placeholder when missing / unavailable. */
 function JobCardCover({
@@ -222,7 +204,6 @@ export default function JobsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filtered.map((job) => {
-              const chip = getStatusChip(job.quote_count ?? 0);
               return (
                 <div
                   key={job.id}
@@ -245,8 +226,8 @@ export default function JobsPage() {
                         {deletingId === job.id ? 'progress_activity' : 'delete'}
                       </span>
                     </button>
-                    <div className={`absolute top-3 right-3 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${chip.cls}`}>
-                      {chip.label}
+                    <div className="absolute top-3 right-3">
+                      <JobStatusBadge status={job.status ?? 'estimate_sent'} size="sm" />
                     </div>
                   </div>
 

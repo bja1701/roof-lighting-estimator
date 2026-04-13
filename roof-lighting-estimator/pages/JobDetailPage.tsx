@@ -6,13 +6,9 @@ import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
 import ClientQuoteModal from '../components/ClientQuoteModal';
-
-interface Job {
-  id: string;
-  name: string;
-  address: string | null;
-  notes: string | null;
-}
+import JobStatusBadge from '../components/JobStatusBadge';
+import PaymentSection from '../components/PaymentSection';
+import { Job, JobStatus } from '../types/job';
 
 interface Quote {
   id: string;
@@ -37,6 +33,14 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [clientQuoteOpen, setClientQuoteOpen] = useState(false);
+
+  const handleStatusChange = (newStatus: JobStatus) => {
+    setJob(prev => prev ? { ...prev, status: newStatus } : prev);
+  };
+
+  const handleJobUpdate = (updates: Partial<Job>) => {
+    setJob(prev => prev ? { ...prev, ...updates } : prev);
+  };
 
   useEffect(() => { if (id) fetchJobAndQuotes(id); }, [id]);
 
@@ -129,7 +133,10 @@ export default function JobDetailPage() {
               <span>/</span>
               <span className="text-on-surface font-bold">{job.name}</span>
             </nav>
-            <h1 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-none">{job.name}</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-none">{job.name}</h1>
+              <JobStatusBadge status={job.status ?? 'estimate_sent'} />
+            </div>
             <div className="flex flex-wrap gap-5 items-center text-on-surface-variant">
               {job.address && (
                 <div className="flex items-center gap-2">
@@ -141,6 +148,12 @@ export default function JobDetailPage() {
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary-container">sticky_note_2</span>
                   <span className="italic">{job.notes}</span>
+                </div>
+              )}
+              {(job.client_name || job.client_email || job.client_phone) && (
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary-container">person</span>
+                  <span>{[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}</span>
                 </div>
               )}
             </div>
@@ -191,6 +204,15 @@ export default function JobDetailPage() {
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-label mb-2">Total Linear Ft</p>
             <p className="text-3xl font-headline font-bold text-on-surface">{totalFt.toFixed(0)} ft</p>
           </div>
+        </div>
+
+        {/* Payment Section */}
+        <div className="mb-12">
+          <PaymentSection
+            job={job}
+            onStatusChange={handleStatusChange}
+            onJobUpdate={handleJobUpdate}
+          />
         </div>
 
         {/* Quotes grid */}
