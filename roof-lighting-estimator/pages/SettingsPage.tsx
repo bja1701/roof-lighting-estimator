@@ -122,6 +122,7 @@ export default function SettingsPage() {
   };
 
   return (
+    <>
     <SharedLayout>
       <div className="max-w-3xl mx-auto px-6 md:px-10 py-10">
         {/* Page header */}
@@ -353,5 +354,6 @@ export default function SettingsPage() {
       </div>
     </SharedLayout>
     {showProModal && <ProWelcomeModal onClose={() => setShowProModal(false)} />}
+    </>
   );
 }
