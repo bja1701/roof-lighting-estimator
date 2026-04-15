@@ -70,7 +70,7 @@ const EstimatorPage: React.FC = () => {
               </svg>
             </div>
             <h1 className="hidden md:block text-sm font-headline font-bold text-inverse-on-surface whitespace-nowrap tracking-tight truncate">
-              Roof Estimator
+              EaveHQ
             </h1>
           </div>
 

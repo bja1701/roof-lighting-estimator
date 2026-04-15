@@ -72,7 +72,7 @@ export default function SharedLayout({ children }: Props) {
             </svg>
           </div>
           <span className="font-headline font-extrabold text-on-surface tracking-tight text-base sm:text-[1.0625rem] leading-none truncate">
-            Roof Estimator
+            EaveHQ
           </span>
         </div>
 
