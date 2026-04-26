@@ -161,6 +161,8 @@ export default function SettingsPage() {
   const [controllerFee, setControllerFee] = useState(300.0);
   const [includeController, setIncludeController] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
+  const [followupDays, setFollowupDays] = useState(3);
+  const [followupMax, setFollowupMax] = useState(2);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -176,6 +178,8 @@ export default function SettingsPage() {
       setControllerFee(profile.controller_fee ?? 300.0);
       setIncludeController(profile.include_controller ?? true);
       setLogoUrl(profile.logo_url ?? '');
+      setFollowupDays(profile.followup_days ?? 3);
+      setFollowupMax(profile.followup_max ?? 2);
     }
   }, [profile]);
 
@@ -224,6 +228,8 @@ export default function SettingsPage() {
       controller_fee: controllerFee,
       include_controller: includeController,
       logo_url: logoUrl || null,
+      followup_days: followupDays,
+      followup_max: followupMax,
     } as any);
     setSaving(false);
     if (err) { setError(err); return; }
@@ -363,6 +369,49 @@ export default function SettingsPage() {
                   />
                 </button>
                 <span className="text-sm text-on-surface">Include controller by default</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Auto Follow-up */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-primary-container/10 rounded-lg flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary-container text-base">schedule_send</span>
+              </div>
+              <div>
+                <h2 className="font-headline font-bold text-on-surface">Auto Follow-up</h2>
+              </div>
+            </div>
+            <p className="text-sm text-on-surface-variant mb-6">
+              Automatically remind clients who haven't responded to their estimate.
+            </p>
+            <div className="space-y-5">
+              <div>
+                <label className={labelCls}>Send follow-up after X days of no response</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    step={1}
+                    value={followupDays}
+                    onChange={e => setFollowupDays(parseInt(e.target.value, 10) || 1)}
+                    className="w-20 px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm transition-all"
+                  />
+                  <span className="text-on-surface-variant text-sm">days</span>
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Maximum follow-ups</label>
+                <select
+                  value={followupMax}
+                  onChange={e => setFollowupMax(parseInt(e.target.value, 10))}
+                  className="w-32 px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm transition-all"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                </select>
               </div>
             </div>
           </section>

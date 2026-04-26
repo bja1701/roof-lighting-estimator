@@ -15,6 +15,16 @@ import JobStatusBadge from '../components/JobStatusBadge';
 import { Job, JobStatus } from '../types/job';
 import { JOB_STATUS_CONFIG } from '../utils/jobStatus';
 
+function timeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? 's' : ''} ago`;
+}
+
 interface Quote {
   id: string;
   label: string;
@@ -27,6 +37,8 @@ interface Quote {
   include_controller: boolean | null;
   canvas_state: any | null;
   created_at: string;
+  discount_amount: number | null;
+  discount_type: string | null;
 }
 
 export default function JobDetailPage() {
@@ -345,6 +357,16 @@ export default function JobDetailPage() {
                 Send Options to Client
               </button>
             )}
+            {job.portal_token && (
+              <button
+                type="button"
+                onClick={() => window.open(`/quote/${job.portal_token}`, '_blank')}
+                className="order-2 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low sm:order-2"
+              >
+                <span className="material-symbols-outlined text-lg">visibility</span>
+                Preview Client View
+              </button>
+            )}
             {(() => {
               const cfg = JOB_STATUS_CONFIG[job.status];
               if (!cfg.nextManualStatus || !cfg.nextManualLabel) return null;
@@ -465,6 +487,22 @@ export default function JobDetailPage() {
               )}
             </div>
           )}
+          {/* Estimate sent / opened tracking */}
+          {job.estimate_sent_at != null && (
+            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+              <span className="material-symbols-outlined text-base text-primary-container">mark_email_read</span>
+              <span>
+                Estimate sent{' '}
+                {new Date(job.estimate_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+              {job.client_opened_at != null && (
+                <span className="text-green-600 font-semibold">
+                  · Client opened {timeAgo(job.client_opened_at)}
+                </span>
+              )}
+            </div>
+          )}
+
           {job.deposit_paid_at == null && !profile?.stripe_connect_enabled && (
             <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
@@ -508,8 +546,14 @@ export default function JobDetailPage() {
                 key={quote.id}
                 quote={quote}
                 profile={profile}
+                jobId={id!}
                 onDelete={() => handleDeleteQuote(quote.id)}
                 onEdit={() => handleOpenEstimator(quote)}
+                onDiscountChange={(qId, amount, type) => {
+                  setQuotes(qs => qs.map(q =>
+                    q.id === qId ? { ...q, discount_amount: amount, discount_type: type } : q
+                  ));
+                }}
               />
             ))}
           </div>

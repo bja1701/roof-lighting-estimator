@@ -86,7 +86,7 @@ serve(async (req) => {
     // 4. Fetch all estimates for this job
     const { data: estimates, error: estimatesError } = await supabaseAdmin
       .from('quotes')
-      .select('id, label, total_price, notes')
+      .select('id, label, total_price, notes, discount_amount, discount_type')
       .eq('job_id', job_id)
       .order('created_at', { ascending: true });
 
@@ -125,44 +125,26 @@ serve(async (req) => {
     const siteUrl = Deno.env.get('SITE_URL') ?? 'https://eavehq.com';
     const clientName = job.client_name ?? 'there';
 
-    // 7. Build one card per estimate
-    const estimateCards = estimates.map((est) => {
-      const price =
-        est.total_price != null
-          ? `$${Number(est.total_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : 'Price TBD';
-      const depositAmount =
-        est.total_price != null
-          ? `$${(Number(est.total_price) * (deposit_percentage / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : null;
-      const deepLink = job.portal_token
-        ? `${siteUrl}/quote/${job.portal_token}?estimate=${est.id}`
-        : siteUrl;
-      const notesRow = est.notes
-        ? `<p style="margin:4px 0 12px;font-size:13px;color:#6b7280;line-height:1.5">${est.notes}</p>`
-        : '';
-      const depositRow = depositAmount
-        ? `<p style="margin:0 0 12px;font-size:13px;color:#374151">Deposit due (${deposit_percentage}%): <strong>${depositAmount}</strong></p>`
-        : '';
-      return `
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;padding:20px 24px">
-    <tr><td>
-      <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#111827">${est.label}</p>
-      <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#f59e0b">${price}</p>
-      ${depositRow}
-      ${notesRow}
-      <a href="${deepLink}"
-         style="display:inline-block;background:#f59e0b;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 22px;border-radius:7px">
-        Select This Option &rarr;
-      </a>
-    </td></tr>
-  </table>`;
-    }).join('');
+    const portalUrl = job.portal_token ? `${siteUrl}/quote/${job.portal_token}` : siteUrl;
+    const invoiceUrl = job.portal_token ? `${siteUrl}/invoice/${job.portal_token}` : siteUrl;
 
     const customMessageBlock = custom_message
       ? `<p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6">${custom_message}</p>`
       : '';
 
+    // Build per-estimate data for tracking/invoice (discount applied)
+    const estimatesSummary = estimates.map((est) => {
+      const raw = Number(est.total_price ?? 0);
+      let discounted = raw;
+      if (est.discount_amount != null && est.discount_type === 'percent') {
+        discounted = raw * (1 - Number(est.discount_amount) / 100);
+      } else if (est.discount_amount != null && est.discount_type === 'flat') {
+        discounted = Math.max(0, raw - Number(est.discount_amount));
+      }
+      return { id: est.id, label: est.label, original: raw, discounted };
+    });
+
+    // 7. Build simplified email body — one portal button + one invoice link
     const htmlBody = `
 <!DOCTYPE html>
 <html lang="en">
@@ -172,13 +154,23 @@ serve(async (req) => {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;padding:40px 48px;max-width:560px">
         <tr><td>
-          <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827">Your estimate options from ${companyName}</p>
+          <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827">Your estimate from ${companyName}</p>
           <p style="margin:0 0 24px;font-size:15px;color:#6b7280">Hi ${clientName},</p>
           ${customMessageBlock}
-          <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
-            Here are your estimate options. Click <strong>Select This Option</strong> on whichever works best for you to review and pay your deposit.
+          <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6">
+            Your estimate options are ready. Click the button below to review and choose the option that works best for you.
           </p>
-          ${estimateCards}
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 16px">
+            <tr><td>
+              <a href="${portalUrl}"
+                 style="display:inline-block;background:#f59e0b;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:8px">
+                View Your Options &rarr;
+              </a>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 28px;font-size:13px">
+            <a href="${invoiceUrl}" style="color:#6b7280;text-decoration:underline">View Full Invoice &rarr;</a>
+          </p>
           <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6">
             If you have any questions, reply to this email or contact your contractor directly.
           </p>
@@ -188,6 +180,9 @@ serve(async (req) => {
   </table>
 </body>
 </html>`.trim();
+
+    // suppress unused-variable warning — estimatesSummary is computed for invoice page context
+    void estimatesSummary;
 
     const resendApiKey = Deno.env.get('RESEND_API');
     if (!resendApiKey) {
@@ -209,6 +204,7 @@ serve(async (req) => {
         to: [job.client_email],
         subject: `Your estimate options from ${companyName} — ${job.name}`,
         html: htmlBody,
+        tags: [{ name: 'job_id', value: job.id }],
       }),
     });
 
@@ -220,6 +216,12 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    // Task 5: record send timestamp and reset followup counter
+    await supabaseAdmin
+      .from('jobs')
+      .update({ estimate_sent_at: new Date().toISOString(), followup_count: 0 })
+      .eq('id', job.id);
 
     return new Response(
       JSON.stringify({ success: true, email_sent: true }),

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { calcDiscountedPrice, discountLabel } from '../utils/discount';
 
 const EDGE_FN_URL =
   'https://bsbewwwflqjlxxovjgec.supabase.co/functions/v1/create-portal-checkout';
@@ -14,6 +15,8 @@ interface Quote {
   total_linear_ft: number | null;
   total_price: number | null;
   notes: string | null;
+  discount_amount: number | null;
+  discount_type: string | null;
 }
 
 interface ContractorProfile {
@@ -74,7 +77,7 @@ export default function ClientPortalPage() {
     const [{ data: quotesData }, { data: profileData }] = await Promise.all([
       supabase
         .from('quotes')
-        .select('id, label, total_linear_ft, total_price, notes')
+        .select('id, label, total_linear_ft, total_price, notes, discount_amount, discount_type')
         .eq('job_id', jobData.id)
         .order('created_at', { ascending: true }),
       supabase
@@ -100,18 +103,27 @@ export default function ClientPortalPage() {
   };
 
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId) ?? null;
+  const selectedEffectivePrice =
+    selectedQuote?.total_price != null
+      ? calcDiscountedPrice(
+          selectedQuote.total_price,
+          selectedQuote.discount_amount,
+          selectedQuote.discount_type,
+        )
+      : null;
   const depositDollars =
-    selectedQuote?.total_price != null && job
-      ? (selectedQuote.total_price * (job.deposit_percent / 100))
+    selectedEffectivePrice != null && job
+      ? (selectedEffectivePrice * (job.deposit_percent / 100))
       : null;
 
   // For final payment: use stored deposit_amount if available, else estimate from percent
+  // Base final calculation on the discounted price
   const finalDollars =
-    selectedQuote?.total_price != null && job
-      ? selectedQuote.total_price - (
+    selectedEffectivePrice != null && job
+      ? selectedEffectivePrice - (
           job.deposit_amount != null
             ? job.deposit_amount
-            : selectedQuote.total_price * (job.deposit_percent / 100)
+            : selectedEffectivePrice * (job.deposit_percent / 100)
         )
       : null;
 
@@ -316,6 +328,10 @@ export default function ClientPortalPage() {
               <div className="space-y-3">
                 {quotes.map(quote => {
                   const isSelected = quote.id === selectedQuoteId;
+                  const effectivePrice = quote.total_price != null
+                    ? calcDiscountedPrice(quote.total_price, quote.discount_amount, quote.discount_type)
+                    : null;
+                  const hasDiscount = effectivePrice != null && quote.total_price != null && effectivePrice < quote.total_price;
                   return (
                     <button
                       key={quote.id}
@@ -345,9 +361,14 @@ export default function ClientPortalPage() {
                                 {Math.round(quote.total_linear_ft).toLocaleString()} linear ft
                               </p>
                             )}
-                            {job.deposit_percent != null && quote.total_price != null && (
+                            {job.deposit_percent != null && effectivePrice != null && (
                               <p className="text-gray-500 text-sm mt-0.5">
-                                Deposit due: ${(quote.total_price * (job.deposit_percent / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                Deposit due: ${(effectivePrice * (job.deposit_percent / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            )}
+                            {hasDiscount && quote.discount_amount != null && quote.discount_type != null && (
+                              <p className="text-green-600 text-sm font-semibold mt-0.5">
+                                {discountLabel(quote.discount_amount, quote.discount_type, quote.total_price!)}
                               </p>
                             )}
                             {quote.notes && (
@@ -355,11 +376,18 @@ export default function ClientPortalPage() {
                             )}
                           </div>
                         </div>
-                        {quote.total_price != null && (
-                          <p className="font-bold text-gray-900 text-lg flex-shrink-0">
-                            ${quote.total_price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </p>
-                        )}
+                        <div className="flex-shrink-0 text-right">
+                          {hasDiscount && quote.total_price != null && (
+                            <p className="text-gray-400 text-sm line-through">
+                              ${quote.total_price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </p>
+                          )}
+                          {effectivePrice != null && (
+                            <p className="font-bold text-gray-900 text-lg">
+                              ${effectivePrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );

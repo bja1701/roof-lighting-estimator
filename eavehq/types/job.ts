@@ -29,6 +29,10 @@ export interface Job {
   client_phone: string | null;
   // Phase 1 — client portal
   portal_token: string | null;
+  // Task 5 — email tracking
+  estimate_sent_at: string | null;
+  client_opened_at: string | null;
+  followup_count: number;
   // Joined from quotes(count) in list queries
   quote_count?: number;
 }

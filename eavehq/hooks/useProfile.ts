@@ -22,6 +22,8 @@ export interface Profile {
   estimates_used: number;
   welcome_shown: boolean;
   role: 'user' | 'admin';
+  followup_days: number;
+  followup_max: number;
 }
 
 interface ProfileState {
