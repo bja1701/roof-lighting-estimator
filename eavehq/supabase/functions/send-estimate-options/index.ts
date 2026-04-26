@@ -35,12 +35,23 @@ serve(async (req) => {
     }
 
     // 2. Parse request body
-    const { job_id, custom_message } = await req.json() as {
+    const { job_id, custom_message, deposit_percentage } = await req.json() as {
       job_id: string;
       custom_message?: string;
+      deposit_percentage: number;
     };
     if (!job_id) {
       return new Response(JSON.stringify({ error: 'job_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (
+      typeof deposit_percentage !== 'number' ||
+      deposit_percentage < 1 ||
+      deposit_percentage > 100
+    ) {
+      return new Response(JSON.stringify({ error: 'deposit_percentage must be a number between 1 and 100' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -120,17 +131,25 @@ serve(async (req) => {
         est.total_price != null
           ? `$${Number(est.total_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : 'Price TBD';
+      const depositAmount =
+        est.total_price != null
+          ? `$${(Number(est.total_price) * (deposit_percentage / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : null;
       const deepLink = job.portal_token
         ? `${siteUrl}/quote/${job.portal_token}?estimate=${est.id}`
         : siteUrl;
       const notesRow = est.notes
         ? `<p style="margin:4px 0 12px;font-size:13px;color:#6b7280;line-height:1.5">${est.notes}</p>`
         : '';
+      const depositRow = depositAmount
+        ? `<p style="margin:0 0 12px;font-size:13px;color:#374151">Deposit due (${deposit_percentage}%): <strong>${depositAmount}</strong></p>`
+        : '';
       return `
   <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;padding:20px 24px">
     <tr><td>
       <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#111827">${est.label}</p>
       <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#f59e0b">${price}</p>
+      ${depositRow}
       ${notesRow}
       <a href="${deepLink}"
          style="display:inline-block;background:#f59e0b;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 22px;border-radius:7px">

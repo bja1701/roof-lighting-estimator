@@ -39,7 +39,6 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [clientQuoteOpen, setClientQuoteOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [depositEditValue, setDepositEditValue] = useState<string>('');
   const [depositEditing, setDepositEditing] = useState(false);
   const [depositSaving, setDepositSaving] = useState(false);
@@ -47,6 +46,7 @@ export default function JobDetailPage() {
   const [advancingStatus, setAdvancingStatus] = useState(false);
   const [sendOptionsModalOpen, setSendOptionsModalOpen] = useState(false);
   const [sendOptionsMessage, setSendOptionsMessage] = useState('');
+  const [sendOptionsDepositPct, setSendOptionsDepositPct] = useState<string>('');
   const [sendOptionsSending, setSendOptionsSending] = useState(false);
 
   const handleStatusChange = (newStatus: JobStatus) => {
@@ -90,6 +90,11 @@ export default function JobDetailPage() {
 
   const handleSendEstimateOptions = async () => {
     if (!id) return;
+    const parsedDepositPct = parseInt(sendOptionsDepositPct, 10);
+    if (isNaN(parsedDepositPct) || parsedDepositPct < 1 || parsedDepositPct > 100) {
+      alert('Enter a deposit percentage between 1 and 100.');
+      return;
+    }
     setSendOptionsSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -103,6 +108,7 @@ export default function JobDetailPage() {
         },
         body: JSON.stringify({
           job_id: id,
+          deposit_percentage: parsedDepositPct,
           ...(sendOptionsMessage.trim() ? { custom_message: sendOptionsMessage.trim() } : {}),
         }),
       });
@@ -111,8 +117,12 @@ export default function JobDetailPage() {
         const errData = await res.json().catch(() => ({}));
         console.error('send-estimate-options failed:', errData);
       }
+      // Store deposit_percent on the job regardless of email success
+      await supabase.from('jobs').update({ deposit_percent: parsedDepositPct }).eq('id', id);
+      handleJobUpdate({ deposit_percent: parsedDepositPct });
       setSendOptionsModalOpen(false);
       setSendOptionsMessage('');
+      setSendOptionsDepositPct('');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to send estimate options');
     } finally {
@@ -185,14 +195,6 @@ export default function JobDetailPage() {
     setAdvancingStatus(false);
     if (error) { alert(error.message); return; }
     handleStatusChange(cfg.nextManualStatus);
-  };
-
-  const handleCopyPortalLink = async () => {
-    if (!job?.portal_token) return;
-    const url = `${window.location.origin}/quote/${job.portal_token}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   useEffect(() => { if (id) fetchJobAndQuotes(id); }, [id]);
@@ -447,78 +449,40 @@ export default function JobDetailPage() {
             </div>
           )}
 
-          {(() => {
-            // Deposit received — shown only when deposit_paid_at is actually set
-            if (job.deposit_paid_at != null) {
-              return (
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1.5 rounded-full">
-                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                    Deposit received
-                    <span className="font-normal">
-                      {' '}· {new Date(job.deposit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </span>
-                  {job.deposit_amount != null && (
-                    <span className="text-sm font-semibold text-on-surface">
-                      ${job.deposit_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  )}
-                </div>
-              );
-            }
-
-            if (!job.portal_token) {
-              return (
-                <p className="text-sm text-on-surface-variant">
-                  No portal link available. Make sure a <code className="text-xs bg-surface-container px-1 py-0.5 rounded">portal_token</code> has been generated for this job.
-                </p>
-              );
-            }
-
-            if (!profile?.stripe_connect_enabled) {
-              return (
-                <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-amber-500 text-base">warning</span>
-                    Connect Stripe to activate client payments
-                  </div>
-                  <p className="text-xs text-on-surface-variant">
-                    Clients can't pay until your Stripe account is set up.
-                  </p>
-                  <a
-                    href="/settings"
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                  >
-                    Connect Stripe
-                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </a>
-                </div>
-              );
-            }
-
-            const portalUrl = `${window.location.origin}/quote/${job.portal_token}`;
-            return (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2 p-3 bg-surface-container-low rounded-lg">
-                  <span className="flex-1 text-sm text-on-surface font-mono truncate">{portalUrl}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyPortalLink}
-                    className="flex items-center gap-1.5 bg-surface-container text-on-surface font-bold py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors text-sm"
-                  >
-                    <span className="material-symbols-outlined text-base">
-                      {copied ? 'check' : 'content_copy'}
-                    </span>
-                    {copied ? 'Copied!' : 'Copy Link'}
-                  </button>
-                </div>
-                <p className="text-xs text-on-surface-variant">
-                  Share this link with your client to let them choose an estimate and pay their deposit.
-                </p>
+          {job.deposit_paid_at != null && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1.5 rounded-full">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                Deposit received
+                <span className="font-normal">
+                  {' '}· {new Date(job.deposit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              </span>
+              {job.deposit_amount != null && (
+                <span className="text-sm font-semibold text-on-surface">
+                  ${job.deposit_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
+          )}
+          {job.deposit_paid_at == null && !profile?.stripe_connect_enabled && (
+            <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                <span className="material-symbols-outlined text-amber-500 text-base">warning</span>
+                Connect Stripe to activate client payments
               </div>
-            );
-          })()}
+              <p className="text-xs text-on-surface-variant">
+                Clients can't pay until your Stripe account is set up.
+              </p>
+              <a
+                href="/settings"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                Connect Stripe
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Quotes grid */}
@@ -591,7 +555,26 @@ export default function JobDetailPage() {
                   </p>
                 ))}
               </div>
-              <div className="mt-4 mb-6">
+              <div className="mt-4 mb-4">
+                <label htmlFor="send-options-deposit-pct" className="block text-xs font-label uppercase tracking-wider text-on-surface-variant mb-1.5">
+                  Deposit required (%)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="send-options-deposit-pct"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={sendOptionsDepositPct}
+                    onChange={e => setSendOptionsDepositPct(e.target.value)}
+                    disabled={sendOptionsSending}
+                    placeholder="e.g. 50"
+                    className="w-24 rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary-container disabled:opacity-50"
+                  />
+                  <span className="text-sm text-on-surface-variant font-label">%</span>
+                </div>
+              </div>
+              <div className="mb-6">
                 <label htmlFor="send-options-message" className="block text-xs font-label uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Custom message (optional)
                 </label>
@@ -608,7 +591,7 @@ export default function JobDetailPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => { setSendOptionsModalOpen(false); setSendOptionsMessage(''); }}
+                  onClick={() => { setSendOptionsModalOpen(false); setSendOptionsMessage(''); setSendOptionsDepositPct(''); }}
                   disabled={sendOptionsSending}
                   className="flex-1 rounded-lg bg-surface-container-low py-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-50"
                 >

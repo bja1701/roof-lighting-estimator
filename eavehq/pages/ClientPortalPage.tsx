@@ -13,6 +13,7 @@ interface Quote {
   label: string;
   total_linear_ft: number | null;
   total_price: number | null;
+  notes: string | null;
 }
 
 interface ContractorProfile {
@@ -73,7 +74,7 @@ export default function ClientPortalPage() {
     const [{ data: quotesData }, { data: profileData }] = await Promise.all([
       supabase
         .from('quotes')
-        .select('id, label, total_linear_ft, total_price')
+        .select('id, label, total_linear_ft, total_price, notes')
         .eq('job_id', jobData.id)
         .order('created_at', { ascending: true }),
       supabase
@@ -343,6 +344,14 @@ export default function ClientPortalPage() {
                               <p className="text-gray-500 text-sm mt-0.5">
                                 {Math.round(quote.total_linear_ft).toLocaleString()} linear ft
                               </p>
+                            )}
+                            {job.deposit_percent != null && quote.total_price != null && (
+                              <p className="text-gray-500 text-sm mt-0.5">
+                                Deposit due: ${(quote.total_price * (job.deposit_percent / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            )}
+                            {quote.notes && (
+                              <p className="text-gray-500 text-sm mt-1 leading-snug">{quote.notes}</p>
                             )}
                           </div>
                         </div>
