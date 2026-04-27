@@ -29,7 +29,7 @@ built specifically for roofline lighting contractors.
 - Founders price ($44.50/mo): `price_1TPqb7AS5bwTFPC7e4OcgDAg`
 - Founders payment link: `https://buy.stripe.com/test_6oU28q3O94ZkauYd5g7ok02`
 
-**Phase priority (as of 2026-04-27):** Ship founding member offer page → live mode migration → next feature sprint
+**Phase priority (as of 2026-04-27):** Live mode migration (Stripe test → live keys) → CRM / job tracking dashboard (Phase 2) → founding member offer page
 
 ---
 
@@ -37,6 +37,58 @@ built specifically for roofline lighting contractors.
 
 > Feature blocks below are written by `eavehq-planner`. Status field tracks pipeline state:
 > `draft → approved → built → qa-passed`
+
+## Feature: Phase 1 — Payment Processing
+Status: built
+Branch: (pre-pipeline — already merged to master)
+Added: 2026-04-10
+Updated: 2026-04-27
+
+### What it does
+Full payment flow from estimate to final payment. Contractor sends estimate options to client via Resend email; client selects an option and pays deposit via Stripe; contractor marks job complete which triggers a final payment email; final payment marks the job done. Contractor payouts routed via Stripe Connect Express.
+
+### User stories
+- Contractor can send estimate options email to client from the job detail page
+- Client can select an estimate option and pay a deposit via Stripe (no account required)
+- Contractor can see job status auto-update when deposit is received
+- Contractor can mark a job complete, which triggers the final payment email automatically
+- Client can pay the remaining balance via the client portal
+- Contractor receives funds via their connected Stripe Express account
+
+### UI changes
+- Job detail page: "Send Options to Client" button + modal, "Mark Complete" button
+- Settings page: Stripe Connect onboarding UI, subscription status/billing
+- Client portal page: estimate selection, deposit payment, final payment
+- Upgrade modal: subscription checkout flow
+
+### Supabase changes
+Jobs table: status, deposit_percent, deposit_amount, final_amount, stripe_deposit_link, stripe_final_link, stripe_customer_id, deposit_paid_at, final_paid_at, client_name, client_email, client_phone, estimate_sent_at, client_opened_at, followup_count, portal_token
+Profiles table: subscription_status, stripe_customer_id, stripe_subscription_id, stripe_account_id, stripe_connect_enabled
+
+### Edge functions affected
+create-checkout-session, stripe-webhook-sub, cancel-subscription, create-connect-link, check-connect-status, send-estimate-options, stripe-webhook, portal-webhook, notify-final-payment, create-portal-checkout, create-final-checkout
+
+### Stripe implications
+Contractor subscriptions ($89/mo), Stripe Connect Express for contractor payouts, deposit + final payment checkout sessions, webhook handlers for checkout.session.completed and subscription events
+
+### Error handling
+Email failures are non-blocking (logged, job status still updates). Connect transfer_data rejected → fallback to platform account. Webhooks use signature verification.
+
+### Dependencies
+None — this is Phase 1 (foundation)
+
+### Acceptance criteria
+- [x] Contractor can send estimate options email from job detail
+- [x] Client can pay deposit via Stripe without an account
+- [x] Job status auto-updates within 60 seconds of deposit payment
+- [x] Mark Complete triggers final payment email automatically
+- [x] Client can pay final balance via portal
+- [x] Contractor payouts routed via Stripe Connect Express
+
+### QA test cases
+- Golden path: create job → send options → client pays deposit → mark complete → client pays final → job = final_paid
+- Edge case: client email missing — email skipped, no crash
+- Failure mode: Stripe Connect not onboarded — fallback to platform account, funds still collected
 
 ---
 
@@ -71,10 +123,10 @@ A field service management platform purpose-built for permanent roofline lightin
 | Free tier (5 estimates) | ✅ Live |
 | Company branding / settings | ✅ Live |
 | Admin dashboard | ✅ Live |
-| Payment processing | ❌ Not built |
-| Job tracking pipeline | ❌ Not built |
+| Payment processing (Stripe subscriptions + Connect + deposit/final flow) | ✅ Live (test mode) |
+| Job tracking pipeline (status: estimate_sent → final_paid) | ✅ Live (test mode) |
+| Client-facing portal (estimate selection, deposit, final payment) | ✅ Live (test mode) |
 | Multi-user / team access | ❌ Not built |
-| Client-facing portal | ❌ Not built |
 | Automated follow-ups / review requests | ❌ Not built |
 
 ---
