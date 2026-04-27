@@ -10,7 +10,6 @@ import { useProfile, useProfileVisibilityRefetch } from '../hooks/useProfile';
 import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
-import ClientQuoteModal from '../components/ClientQuoteModal';
 import JobStatusBadge from '../components/JobStatusBadge';
 import { Job, JobStatus } from '../types/job';
 import { JOB_STATUS_CONFIG } from '../utils/jobStatus';
@@ -50,7 +49,6 @@ export default function JobDetailPage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [clientQuoteOpen, setClientQuoteOpen] = useState(false);
   const [depositEditValue, setDepositEditValue] = useState<string>('');
   const [depositEditing, setDepositEditing] = useState(false);
   const [depositSaving, setDepositSaving] = useState(false);
@@ -426,42 +424,29 @@ export default function JobDetailPage() {
 
             <div className="w-px h-6 bg-outline-variant/30 mx-1" />
 
-            {/* Send to Client — primary */}
+            {/* Send Options to Client — primary CTA */}
             {quotes.length > 0 && (
               <button
                 type="button"
                 onClick={handleOpenSendOptions}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 px-5 font-headline text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary/90 min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 px-6 font-headline text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary/90 min-h-[44px] flex-1 sm:flex-none"
               >
                 <span className="material-symbols-outlined text-lg">send</span>
-                Send to Client
+                Send Options to Client
               </button>
             )}
 
-            {/* Preview — secondary */}
+            {/* View Invoice — demoted text link */}
             {job.portal_token && (
-              <button
-                type="button"
-                onClick={() => window.open(`/quote/${job.portal_token}`, '_blank')}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low min-h-[44px]"
+              <a
+                href={`/invoice/${job.portal_token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors min-h-[36px]"
               >
-                <span className="material-symbols-outlined text-lg">visibility</span>
-                Preview
-              </button>
-            )}
-
-            {/* Invoice PDF — secondary */}
-            {job.portal_token && (
-              <button
-                type="button"
-                onClick={() => setClientQuoteOpen(true)}
-                disabled={quotes.length === 0}
-                title={quotes.length === 0 ? 'Save at least one estimate first' : 'Build a PDF for your client'}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-45 min-h-[44px]"
-              >
-                <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-                Invoice
-              </button>
+                <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                View Invoice
+              </a>
             )}
 
             {/* Stripe nudge */}
@@ -557,14 +542,6 @@ export default function JobDetailPage() {
           </button>
         </div>
       </div>
-
-      <ClientQuoteModal
-        open={clientQuoteOpen}
-        onClose={() => setClientQuoteOpen(false)}
-        job={{ name: job.name, address: job.address }}
-        quotes={quotes}
-        profile={profile}
-      />
 
       {sendOptionsModalOpen && (
         <div

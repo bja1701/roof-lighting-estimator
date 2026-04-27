@@ -41,12 +41,6 @@ export const JOB_STATUS_CONFIG: Record<JobStatus, StatusConfig> = {
   final_paid: {
     label: 'Final Paid',
     badgeCls: 'bg-green-100 text-green-800',
-    nextManualStatus: 'reviewed',
-    nextManualLabel: 'Mark Reviewed',
-  },
-  reviewed: {
-    label: 'Reviewed',
-    badgeCls: 'bg-surface-container-lowest border border-outline-variant/30 text-on-surface-variant',
     nextManualStatus: null,
     nextManualLabel: null,
   },

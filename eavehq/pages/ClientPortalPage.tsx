@@ -167,9 +167,9 @@ export default function ClientPortalPage() {
     }
   };
 
-  const depositPaidStatuses = ['deposit_paid', 'scheduled', 'in_progress', 'complete', 'final_paid', 'reviewed'];
+  const depositPaidStatuses = ['deposit_paid', 'scheduled', 'in_progress', 'complete', 'final_paid'];
   const isDepositPaid = job ? depositPaidStatuses.includes(job.status) : false;
-  const isFinalPaid = job?.status === 'final_paid' || job?.status === 'reviewed';
+  const isFinalPaid = job?.status === 'final_paid';
   const isReadyForFinal = job?.status === 'complete';
 
   if (loading) {

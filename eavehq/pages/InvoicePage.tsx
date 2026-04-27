@@ -33,12 +33,15 @@ interface JobData {
   deposit_percent: number;
   client_name: string | null;
   created_at: string;
+  estimate_sent_at: string | null;
 }
 
 interface ContractorProfile {
   company_name: string | null;
   full_name: string | null;
   logo_url: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 export default function InvoicePage() {
@@ -60,7 +63,7 @@ export default function InvoicePage() {
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
-      .select('id, user_id, name, address, deposit_percent, client_name, created_at')
+      .select('id, user_id, name, address, deposit_percent, client_name, created_at, estimate_sent_at')
       .eq('portal_token', portalToken)
       .single();
 
@@ -80,7 +83,7 @@ export default function InvoicePage() {
         .order('created_at', { ascending: true }),
       supabase
         .from('profiles')
-        .select('company_name, full_name, logo_url')
+        .select('company_name, full_name, logo_url, email, phone')
         .eq('id', jobData.user_id)
         .single(),
     ]);
@@ -91,8 +94,8 @@ export default function InvoicePage() {
   };
 
   const contractorName = contractor?.company_name ?? contractor?.full_name ?? 'Your Contractor';
-  const dateSent = job
-    ? new Date(job.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const preparedDate = job
+    ? new Date(job.estimate_sent_at ?? job.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : '';
 
   if (loading) {
@@ -155,13 +158,19 @@ export default function InvoicePage() {
                 <div>
                   <p className="text-xl font-bold leading-tight">{contractorName}</p>
                   <p className="text-gray-400 text-sm mt-0.5">Estimate Invoice</p>
+                  {contractor?.email && (
+                    <p className="text-gray-400 text-sm mt-0.5">{contractor.email}</p>
+                  )}
+                  {contractor?.phone && (
+                    <p className="text-gray-400 text-sm mt-0.5">{contractor.phone}</p>
+                  )}
                 </div>
               </div>
               <div className="text-right text-sm text-gray-400 flex-shrink-0">
                 <p className="text-white font-bold text-lg">{job.name}</p>
                 {job.address && <p className="mt-0.5">{job.address}</p>}
                 {job.client_name && <p className="mt-0.5">Client: {job.client_name}</p>}
-                <p className="mt-0.5">Date: {dateSent}</p>
+                <p className="mt-0.5">Prepared {preparedDate}</p>
               </div>
             </div>
           </div>
