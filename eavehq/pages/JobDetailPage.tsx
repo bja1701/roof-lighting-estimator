@@ -100,6 +100,11 @@ export default function JobDetailPage() {
     if (e.key === 'Escape') setDepositEditing(false);
   };
 
+  const handleOpenSendOptions = () => {
+    setSendOptionsDepositPct(String(job?.deposit_percent ?? 50));
+    setSendOptionsModalOpen(true);
+  };
+
   const handleSendEstimateOptions = async () => {
     if (!id) return;
     const parsedDepositPct = parseInt(sendOptionsDepositPct, 10);
@@ -289,114 +294,189 @@ export default function JobDetailPage() {
   return (
     <SharedLayout>
       <div className="max-w-6xl mx-auto px-6 md:px-10 pb-20 pt-10">
-        {/* Breadcrumb + Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-          <div className="space-y-4">
-            <nav className="flex items-center gap-2 text-on-surface-variant text-sm font-label uppercase tracking-widest">
-              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                Jobs
-              </button>
-              <span>/</span>
-              <span className="text-on-surface font-bold">{job.name}</span>
-            </nav>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-none">{job.name}</h1>
-              {job.status !== 'estimate_sent' && (
-                <JobStatusBadge status={job.status} />
-              )}
-            </div>
-            <div className="flex flex-wrap gap-5 items-center text-on-surface-variant">
-              {job.address && (
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary-container">location_on</span>
-                  <span>{job.address}</span>
-                </div>
-              )}
-              {job.notes && (
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary-container">sticky_note_2</span>
-                  <span className="italic">{job.notes}</span>
-                </div>
-              )}
-              {(job.client_name || job.client_email || job.client_phone) && (
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary-container">person</span>
-                  <span>{[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}</span>
-                </div>
-              )}
-            </div>
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-on-surface-variant text-sm font-label uppercase tracking-widest mb-6">
+          <button onClick={() => navigate('/')} className="hover:text-primary transition-colors flex items-center gap-1">
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            Jobs
+          </button>
+          <span>/</span>
+          <span className="text-on-surface font-bold">{job.name}</span>
+        </nav>
+
+        {/* Job header */}
+        <div className="mb-3">
+          <h1 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-none mb-3">{job.name}</h1>
+          <div className="flex flex-wrap gap-4 items-center text-on-surface-variant text-sm">
+            {job.address && (
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base text-primary-container">location_on</span>
+                <span>{job.address}</span>
+              </div>
+            )}
+            {job.notes && (
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base text-primary-container">sticky_note_2</span>
+                <span className="italic">{job.notes}</span>
+              </div>
+            )}
+            {(job.client_name || job.client_email || job.client_phone) && (
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base text-primary-container">person</span>
+                <span>{[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}</span>
+              </div>
+            )}
           </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={handleDeleteJob}
-              disabled={deleting}
-              className="order-3 flex items-center justify-center gap-2 rounded-lg border border-error/40 bg-surface-container-lowest py-3 px-5 font-label text-sm font-bold uppercase tracking-wider text-error transition-colors hover:bg-error-container/20 disabled:opacity-50 sm:order-1"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-              {deleting ? 'Deleting…' : 'Delete job'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setClientQuoteOpen(true)}
-              disabled={quotes.length === 0}
-              title={quotes.length === 0 ? 'Save at least one estimate first' : 'Build a PDF for your client'}
-              className="order-2 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-45 sm:order-2"
-            >
-              <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-              Client quote
-            </button>
+        </div>
+
+        {/* Status pills row */}
+        <div className="flex flex-wrap gap-2 items-center mb-4">
+          <JobStatusBadge status={job.status} />
+
+          {job.estimate_sent_at != null && (
+            <span className="inline-flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 text-on-surface-variant text-xs font-semibold px-3 py-1.5 rounded-full min-h-[36px]">
+              <span className="material-symbols-outlined text-sm text-primary-container">mark_email_read</span>
+              Estimate sent {new Date(job.estimate_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          )}
+
+          {job.client_opened_at != null && (
+            <span className="inline-flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full min-h-[36px]">
+              <span className="material-symbols-outlined text-sm">visibility</span>
+              Client opened {timeAgo(job.client_opened_at)}
+            </span>
+          )}
+
+          {job.deposit_paid_at != null && (
+            <span className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 text-xs font-semibold px-3 py-1.5 rounded-full min-h-[36px]">
+              <span className="material-symbols-outlined text-sm">check_circle</span>
+              Deposit received {new Date(job.deposit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {job.deposit_amount != null && (
+                <span className="font-normal ml-0.5">· ${job.deposit_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              )}
+            </span>
+          )}
+
+          {job.final_paid_at != null && (
+            <span className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 text-xs font-semibold px-3 py-1.5 rounded-full min-h-[36px]">
+              <span className="material-symbols-outlined text-sm">check_circle</span>
+              Final payment received {new Date(job.final_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {job.final_amount != null && (
+                <span className="font-normal ml-0.5">· ${job.final_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              )}
+            </span>
+          )}
+        </div>
+
+        {/* Next-status action — inline with pills */}
+        {(() => {
+          const cfg = JOB_STATUS_CONFIG[job.status];
+          if (!cfg.nextManualStatus || !cfg.nextManualLabel) return null;
+          const isStartedTransition = job.status === 'scheduled' && cfg.nextManualStatus === 'in_progress';
+          if (isStartedTransition && quotes.length === 0) return null;
+          return (
+            <div className="mb-8">
+              <button
+                type="button"
+                onClick={handleAdvanceStatus}
+                disabled={advancingStatus}
+                className="inline-flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:opacity-50 min-h-[44px]"
+              >
+                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                {advancingStatus ? 'Saving…' : cfg.nextManualLabel}
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Client actions row */}
+        {(quotes.length > 0 || job.portal_token) && (
+          <div className="flex flex-wrap gap-3 items-center mb-8 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
+            {/* Deposit % — compact inline field */}
+            <div className="flex items-center gap-2 text-sm mr-2">
+              <span className="font-label text-on-surface-variant text-xs uppercase tracking-wider">Deposit</span>
+              {depositEditing ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={depositEditValue}
+                    onChange={e => setDepositEditValue(e.target.value)}
+                    onBlur={handleDepositSave}
+                    onKeyDown={handleDepositKeyDown}
+                    autoFocus
+                    className="w-14 rounded-md border border-outline-variant/40 bg-surface-container px-2 py-1 text-sm font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container"
+                  />
+                  <span className="text-on-surface-variant font-label text-xs">%</span>
+                  {depositSaving && <span className="text-xs text-on-surface-variant">Saving…</span>}
+                  {depositError && <span className="text-xs text-error">{depositError}</span>}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDepositEditStart}
+                  className="inline-flex items-center gap-1 font-bold text-on-surface hover:text-primary transition-colors text-sm min-h-[36px]"
+                >
+                  {job.deposit_percent ?? 50}%
+                  <span className="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+                </button>
+              )}
+            </div>
+
+            <div className="w-px h-6 bg-outline-variant/30 mx-1" />
+
+            {/* Send to Client — primary */}
             {quotes.length > 0 && (
               <button
                 type="button"
-                onClick={() => setSendOptionsModalOpen(true)}
-                className="order-2 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low sm:order-2"
+                onClick={handleOpenSendOptions}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 px-5 font-headline text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary/90 min-h-[44px]"
               >
                 <span className="material-symbols-outlined text-lg">send</span>
-                Send Options to Client
+                Send to Client
               </button>
             )}
+
+            {/* Preview — secondary */}
             {job.portal_token && (
               <button
                 type="button"
                 onClick={() => window.open(`/quote/${job.portal_token}`, '_blank')}
-                className="order-2 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low sm:order-2"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low min-h-[44px]"
               >
                 <span className="material-symbols-outlined text-lg">visibility</span>
-                Preview Client View
+                Preview
               </button>
             )}
-            {(() => {
-              const cfg = JOB_STATUS_CONFIG[job.status];
-              if (!cfg.nextManualStatus || !cfg.nextManualLabel) return null;
-              // "Mark as Started" requires at least one estimate
-              const isStartedTransition =
-                job.status === 'scheduled' && cfg.nextManualStatus === 'in_progress';
-              if (isStartedTransition && quotes.length === 0) return null;
-              return (
-                <button
-                  type="button"
-                  onClick={handleAdvanceStatus}
-                  disabled={advancingStatus}
-                  className="order-1 flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-3 px-5 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:opacity-50 sm:order-2"
-                >
-                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                  {advancingStatus ? 'Saving…' : cfg.nextManualLabel}
-                </button>
-              );
-            })()}
-            <button
-              type="button"
-              onClick={() => handleOpenEstimator()}
-              disabled={!canEstimate}
-              className="order-1 amber-gradient flex items-center justify-center gap-3 rounded-lg py-4 px-8 font-headline font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:order-3"
-            >
-              <span className="material-symbols-outlined">add</span>
-              New Estimate
-            </button>
+
+            {/* Invoice PDF — secondary */}
+            {job.portal_token && (
+              <button
+                type="button"
+                onClick={() => setClientQuoteOpen(true)}
+                disabled={quotes.length === 0}
+                title={quotes.length === 0 ? 'Save at least one estimate first' : 'Build a PDF for your client'}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-45 min-h-[44px]"
+              >
+                <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+                Invoice
+              </button>
+            )}
+
+            {/* Stripe nudge */}
+            {job.deposit_paid_at == null && !profile?.stripe_connect_enabled && (
+              <a
+                href="/settings"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 hover:bg-amber-100 transition-colors min-h-[36px]"
+              >
+                <span className="material-symbols-outlined text-sm">warning</span>
+                Connect Stripe
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </a>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Bento stats row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -414,118 +494,22 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* Client Portal */}
-        <div className="mb-12 bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-6 space-y-4">
-          <h2 className="font-headline font-bold text-lg text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary-container">share</span>
-            Client Portal
-          </h2>
-
-          {/* Deposit % editor — always visible */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-label text-on-surface-variant">Deposit:</span>
-            {depositEditing ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={depositEditValue}
-                  onChange={e => setDepositEditValue(e.target.value)}
-                  onBlur={handleDepositSave}
-                  onKeyDown={handleDepositKeyDown}
-                  autoFocus
-                  className="w-16 rounded-md border border-outline-variant/40 bg-surface-container px-2 py-1 text-sm font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container"
-                />
-                <span className="text-on-surface-variant font-label">%</span>
-                {depositSaving && <span className="text-xs text-on-surface-variant">Saving…</span>}
-                {depositError && <span className="text-xs text-error">{depositError}</span>}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDepositEditStart}
-                className="flex items-center gap-1 font-bold text-on-surface hover:text-primary transition-colors"
-              >
-                {job.deposit_percent ?? 50}%
-                <span className="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
-              </button>
-            )}
-          </div>
-
-          {/* Final payment status — shown only when final_paid_at is actually set */}
-          {job.final_paid_at != null && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1.5 rounded-full">
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                Final payment received
-                <span className="font-normal">
-                  {' '}· {new Date(job.final_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              </span>
-              {job.final_amount != null && (
-                <span className="text-sm font-semibold text-on-surface">
-                  ${job.final_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              )}
-            </div>
-          )}
-
-          {job.deposit_paid_at != null && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-bold px-3 py-1.5 rounded-full">
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                Deposit received
-                <span className="font-normal">
-                  {' '}· {new Date(job.deposit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              </span>
-              {job.deposit_amount != null && (
-                <span className="text-sm font-semibold text-on-surface">
-                  ${job.deposit_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              )}
-            </div>
-          )}
-          {/* Estimate sent / opened tracking */}
-          {job.estimate_sent_at != null && (
-            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-              <span className="material-symbols-outlined text-base text-primary-container">mark_email_read</span>
-              <span>
-                Estimate sent{' '}
-                {new Date(job.estimate_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-              {job.client_opened_at != null && (
-                <span className="text-green-600 font-semibold">
-                  · Client opened {timeAgo(job.client_opened_at)}
-                </span>
-              )}
-            </div>
-          )}
-
-          {job.deposit_paid_at == null && !profile?.stripe_connect_enabled && (
-            <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-                <span className="material-symbols-outlined text-amber-500 text-base">warning</span>
-                Connect Stripe to activate client payments
-              </div>
-              <p className="text-xs text-on-surface-variant">
-                Clients can't pay until your Stripe account is set up.
-              </p>
-              <a
-                href="/settings"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-              >
-                Connect Stripe
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </a>
-            </div>
-          )}
+        {/* Estimates section */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-headline font-bold text-lg text-on-surface">Estimates</h2>
+          <button
+            type="button"
+            onClick={() => handleOpenEstimator()}
+            disabled={!canEstimate}
+            className="amber-gradient inline-flex items-center gap-2 rounded-lg py-2.5 px-5 font-headline font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px]"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            New Estimate
+          </button>
         </div>
 
-        {/* Quotes grid */}
         {quotes.length === 0 ? (
-          <div className="text-center py-24 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10">
+          <div className="text-center py-24 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 mb-12">
             <div className="w-16 h-16 bg-surface-container rounded-2xl mx-auto mb-5 flex items-center justify-center">
               <span className="material-symbols-outlined text-on-surface-variant text-3xl">request_quote</span>
             </div>
@@ -540,7 +524,7 @@ export default function JobDetailPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {quotes.map(quote => (
               <QuoteCard
                 key={quote.id}
@@ -558,6 +542,20 @@ export default function JobDetailPage() {
             ))}
           </div>
         )}
+
+        {/* Danger zone */}
+        <div className="border-t border-outline-variant/20 pt-8">
+          <p className="text-xs font-label uppercase tracking-wider text-on-surface-variant mb-3">Danger zone</p>
+          <button
+            type="button"
+            onClick={handleDeleteJob}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 rounded-lg border border-error/30 bg-surface-container-lowest py-2.5 px-4 font-label text-sm font-bold text-error transition-colors hover:bg-error-container/20 disabled:opacity-50 min-h-[44px]"
+          >
+            <span className="material-symbols-outlined text-lg">delete</span>
+            {deleting ? 'Deleting…' : 'Delete job'}
+          </button>
+        </div>
       </div>
 
       <ClientQuoteModal
