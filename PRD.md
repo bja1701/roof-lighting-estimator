@@ -92,6 +92,136 @@ None — this is Phase 1 (foundation)
 
 ---
 
+## Feature: Phase 2 — CRM / Job Tracking Dashboard
+Status: approved
+Branch: feature/crm-job-tracking-dashboard
+Added: 2026-04-27
+Updated: 2026-04-27
+
+### What it does
+Extracts client data from inline job fields into a dedicated `clients` table, and replaces
+the current flat job list with a mobile-first dashboard — sortable list view with active/
+completed filters and a weekly calendar tab. Each job gains two note sections (customer-
+visible and private contractor-only) with file/photo attachments in private notes, plus
+bulk CSV import for client and job history migration.
+
+### User stories
+- Contractor can view all jobs in a sortable list, defaulting to active jobs, with one-tap
+  toggle to completed and archived
+- Contractor can switch to a weekly calendar view of scheduled jobs
+- Contractor can open a job and add customer notes (visible in the client portal)
+- Contractor can add private notes (contractor-only) with inline file/photo attachments
+  stored in Supabase Storage
+- Contractor can view a client's full history by navigating to their client record
+- Contractor can import a CSV of clients and job history; duplicate emails trigger a merge
+  popup with explicit options
+- Client can view customer notes added by the contractor in the existing client portal
+
+### UI changes
+- New `/dashboard` (or replace existing job list): list view sorted by scheduled date,
+  active jobs default filter, one-tap toggle for completed/archived
+- New "Schedule" tab within dashboard: weekly calendar view of jobs by scheduled date
+- New `/clients` route: clients table view with name, phone, email, address, company name,
+  client-level notes
+- New `/clients/:id` route: client detail — contact info + full job history list
+- Job detail page: two-section notes area — "Customer Notes" (visible label) and
+  "Private Notes" (with inline file/photo attachment upload); new "Client Uploads"
+  section showing files uploaded by client through portal
+- Settings or separate import page: CSV import flow with merge popup on email collision
+- All views must be touch-friendly and readable on phones (mobile-first, no
+  desktop-only layouts)
+
+### Supabase changes
+- New `clients` table: `id`, `contractor_id` (FK profiles), `name`, `phone`, `email`,
+  `address_street`, `address_city`, `address_zip`, `company_name`, `notes`, `created_at`,
+  `updated_at`
+- Add `client_id` (FK `clients.id`, nullable) to `jobs` table
+- Backfill migration: match existing jobs to clients by email; create client records for
+  matches, set `client_id`; unmatched jobs retain existing inline `client_name`,
+  `client_email`, `client_phone` fields (no data loss)
+- New `job_notes` table: `id`, `job_id` (FK jobs), `contractor_id` (FK profiles), `type`
+  (enum: `customer` | `private`), `body` (text), `created_at`, `updated_at`
+- New `job_attachments` table: `id`, `job_id`, `note_id` (nullable FK job_notes),
+  `uploader_type` (enum: `contractor` | `client`), `storage_path`, `filename`,
+  `mime_type`, `created_at`
+- RLS: `clients` — contractor can CRUD their own rows only; `job_notes` — contractor
+  can CRUD their own; `customer` notes readable via portal token (same pattern as existing
+  portal RLS); `job_attachments` — contractor can CRUD own; client portal can INSERT
+  with uploader_type = `client` and read own rows
+- Supabase Storage bucket `job-files`: private bucket, signed URLs for access
+- New migration file required for all of the above
+
+### Edge functions affected
+- No existing edge functions require changes for core CRM/notes
+- New edge function `generate-signed-url` (or use Supabase Storage SDK client-side with
+  service role in edge function): generates short-lived signed URLs for attachment
+  downloads
+- Client portal page may need a lightweight read endpoint for `customer`-type notes if
+  current portal token auth does not already support new tables — confirm at build time
+
+### Stripe implications
+None
+
+### Error handling
+- File/photo upload failure is non-blocking: note text saves first; if storage upload
+  fails, note is saved without attachment and contractor sees an inline error message
+  with a retry button
+- CSV import: malformed rows are skipped with a per-row error log shown in the UI after
+  import completes; valid rows still import
+- CSV merge popup (email collision): contractor must explicitly choose "merge" or
+  "keep separate" — no silent auto-merge; import does not proceed until resolved
+- Signed URL generation failure: attachment shows a "failed to load" placeholder with
+  retry; does not crash the job detail page
+
+### Dependencies
+- Phase 1 — Payment Processing (Status: built) — required; `jobs` table and portal token
+  pattern must exist before this feature extends them
+
+### Acceptance criteria
+- [ ] A `clients` table exists in Supabase with all specified fields and contractor-scoped RLS
+- [ ] `jobs` table has a `client_id` FK column after migration
+- [ ] Backfill migration runs without error; existing jobs with a matching client email have
+  `client_id` set; unmatched jobs retain inline client fields with no data loss
+- [ ] Dashboard list view loads and defaults to active jobs filter
+- [ ] One tap/click on the completed filter shows only completed jobs; one tap on archived
+  shows only archived jobs
+- [ ] Weekly calendar tab renders jobs on their scheduled dates with no console errors
+- [ ] Contractor can type and save a customer note on a job; note text persists on page
+  reload
+- [ ] Customer note is visible in the client portal for the same job
+- [ ] Contractor can type and save a private note on a job; note text persists on page
+  reload
+- [ ] Private note is NOT visible anywhere in the client portal
+- [ ] Contractor can attach a file to a private note; file uploads to Supabase Storage and
+  is retrievable via signed URL
+- [ ] If a file upload fails, the note text is saved and contractor sees an inline error
+  (no full-page crash)
+- [ ] Client upload through portal appears in the "Client Uploads" section on the job
+  detail page (contractor view only)
+- [ ] `/clients` route lists all clients for the logged-in contractor
+- [ ] `/clients/:id` shows client contact info and full job history for that client
+- [ ] CSV import with zero email collisions completes and creates corresponding client and
+  job records
+- [ ] CSV import with at least one email collision shows a merge popup before proceeding;
+  import does not auto-merge silently
+- [ ] All above views pass a basic mobile render check at 375px viewport width (no
+  horizontal overflow, tap targets >= 44px)
+
+### QA test cases
+- Golden path: contractor logs in → views dashboard (active jobs, sorted by date) → opens
+  a job → adds customer note → switches to client portal view → confirms note is visible →
+  adds private note with photo → confirms photo loads via signed URL → navigates to
+  `/clients` → opens client record → sees job history
+- Edge case: CSV import file contains 3 rows — 1 clean, 1 with a colliding email, 1 with
+  a missing required field (name) — result: merge popup fires for the collision, malformed
+  row is skipped with an error listed, clean row imports successfully
+- Edge case: contractor uploads a 15MB file — if over the storage bucket size limit,
+  upload fails with a clear size-limit error message; note text is still saved
+- Failure mode: Supabase Storage unavailable during file upload — note body saves, inline
+  error shown with retry; page does not crash and contractor does not lose typed note text
+
+---
+
 ## Legacy PRD Content (pre-pipeline)
 
 > The content below is the original PRD from before the pipeline was set up.
