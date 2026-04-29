@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastProvider } from './hooks/useToast';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import AuthPage from './pages/AuthPage';
@@ -55,8 +56,8 @@ function AppRoutes() {
 
   if (!authDone || authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-primary-dark)' }}>
+        <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '2px solid rgba(255,255,255,0.15)', borderTopColor: 'var(--color-accent)' }} />
       </div>
     );
   }
@@ -95,8 +96,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
