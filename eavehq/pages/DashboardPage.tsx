@@ -153,12 +153,21 @@ export default function DashboardPage() {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('jobs')
       .select('*, quotes(count)')
-      .order('scheduled_date', { ascending: true, nullsFirst: false });
+      .order('created_at', { ascending: false });
+    if (error) console.error('[DashboardPage] fetchJobs error:', error);
     if (data) {
-      setJobs(data.map((j: any) => ({ ...j, quote_count: j.quotes?.[0]?.count ?? 0 })));
+      const mapped = data.map((j: any) => ({ ...j, quote_count: j.quotes?.[0]?.count ?? 0 }));
+      // Sort by scheduled_date client-side (nulls last) if the column exists
+      mapped.sort((a: any, b: any) => {
+        if (!a.scheduled_date && !b.scheduled_date) return 0;
+        if (!a.scheduled_date) return 1;
+        if (!b.scheduled_date) return -1;
+        return a.scheduled_date < b.scheduled_date ? -1 : 1;
+      });
+      setJobs(mapped);
     }
     setLoading(false);
   }, []);
