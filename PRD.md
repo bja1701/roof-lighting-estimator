@@ -93,7 +93,7 @@ None — this is Phase 1 (foundation)
 ---
 
 ## Feature: Phase 2 — CRM / Job Tracking Dashboard
-Status: approved
+Status: qa-passed
 Branch: feature/crm-job-tracking-dashboard
 Added: 2026-04-27
 Updated: 2026-04-27
