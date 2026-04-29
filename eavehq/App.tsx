@@ -5,6 +5,9 @@ import { useProfile } from './hooks/useProfile';
 import AuthPage from './pages/AuthPage';
 import JobsPage from './pages/JobsPage';
 import JobDetailPage from './pages/JobDetailPage';
+import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import ClientDetailPage from './pages/ClientDetailPage';
 import EstimatorRouteGuard from './components/EstimatorRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
@@ -77,8 +80,11 @@ function AppRoutes() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<JobsPage />} />
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/jobs" element={<JobsPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/estimator" element={<EstimatorRouteGuard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />

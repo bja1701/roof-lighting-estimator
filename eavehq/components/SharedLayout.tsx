@@ -41,7 +41,8 @@ const Icons = {
 };
 
 const navItems = [
-  { label: 'Jobs', icon: Icons.jobs, path: '/' },
+  { label: 'Dashboard', icon: Icons.jobs, path: '/' },
+  { label: 'Clients', icon: Icons.admin, path: '/clients' },
   { label: 'Estimator', icon: Icons.estimator, path: '/estimator' },
   { label: 'Settings', icon: Icons.settings, path: '/settings' },
 ];
