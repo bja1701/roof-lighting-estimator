@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Mail, Lock, ArrowRight, MailCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { supabase } from '../lib/supabase';
@@ -7,6 +8,39 @@ interface Props {
   onSuccess: () => void;
   onNewUser: () => void;
 }
+
+const DARK_BG = 'var(--color-primary-dark)';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  paddingLeft: '2.5rem',
+  paddingRight: '1rem',
+  paddingTop: '0.75rem',
+  paddingBottom: '0.75rem',
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: 'var(--radius-md)',
+  color: '#fff',
+  fontSize: '0.875rem',
+  caretColor: '#fff',
+  outline: 'none',
+  transition: 'border-color 150ms ease',
+};
+
+const inputNoIconStyle: React.CSSProperties = {
+  ...inputStyle,
+  paddingLeft: '1rem',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.1em',
+  color: 'rgba(255,255,255,0.45)',
+  marginBottom: '6px',
+};
 
 export default function AuthPage({ onSuccess, onNewUser }: Props) {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
@@ -18,6 +52,9 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
+
+  const { signIn, signUp } = useAuth();
+  const { fetchProfile } = useProfile();
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +68,10 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
     setMode('forgot-sent');
   };
 
-  const { signIn, signUp } = useAuth();
-  const { fetchProfile } = useProfile();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-
     if (tab === 'login') {
       const { error: err } = await signIn(email, password);
       if (err) { setError(err); setSubmitting(false); return; }
@@ -54,157 +87,209 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
     }
   };
 
-  const inputCls = 'w-full pl-10 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
-  const inputNoPrefixCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
-  const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
+  const Logo = () => (
+    <div
+      className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{
+        background: 'var(--color-accent)',
+        boxShadow: '0 8px 24px rgba(217,111,10,0.35)',
+        border: '1px solid rgba(255,255,255,0.15)',
+      }}
+    >
+      <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
+        <rect x="9" y="14" width="6" height="6" rx="0.5" />
+      </svg>
+    </div>
+  );
 
-  // ── Forgot password: sent screen ─────────────────────────────────────────
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+      }}
+    >
+      {children}
+    </div>
+  );
+
+  const ErrorBanner = ({ msg }: { msg: string }) => (
+    <div
+      className="px-4 py-3 rounded-lg"
+      style={{ background: 'rgba(201,64,64,0.15)', border: '1px solid rgba(201,64,64,0.3)' }}
+    >
+      <p className="text-sm font-medium" style={{ color: '#f87171' }}>{msg}</p>
+    </div>
+  );
+
+  // Forgot sent
   if (mode === 'forgot-sent') {
     return (
-      <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
-        <div className="w-full max-w-sm text-center relative z-10">
+      <AuthShell>
+        <div className="w-full max-w-sm text-center">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
-              <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>lock_reset</span>
-            </div>
-            <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-1">Check your email</h1>
-            <p className="text-surface-variant font-label uppercase tracking-[0.2em] text-[10px]">Password Reset</p>
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl shadow-2xl p-8">
-            <p className="text-on-surface-variant text-sm mb-1">We sent a reset link to</p>
-            <p className="text-on-surface font-semibold text-sm mb-4">{email}</p>
-            <p className="text-on-surface-variant text-xs mb-6 leading-relaxed">
-              Click the link in that email to choose a new password. Check your spam folder if you don't see it.
+            <Logo />
+            <h1 className="mt-4 font-extrabold text-3xl tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+              Check your email
+            </h1>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Password Reset
             </p>
-            <button
-              onClick={() => { setMode('auth'); setTab('login'); }}
-              className="w-full py-3 bg-surface-container-low text-primary font-headline font-bold rounded-lg hover:bg-surface-container transition-colors"
-            >
-              Back to Sign In
-            </button>
           </div>
+          <Card>
+            <div className="px-8 py-8">
+              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>We sent a reset link to</p>
+              <p className="font-semibold text-sm mb-4 text-white">{email}</p>
+              <p className="text-xs mb-6 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Click the link in that email to choose a new password. Check your spam folder if you don't see it.
+              </p>
+              <button
+                onClick={() => { setMode('auth'); setTab('login'); }}
+                className="w-full py-3 rounded-lg text-sm font-bold transition-colors"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </Card>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
-  // ── Forgot password: email entry screen ───────────────────────────────────
+  // Forgot form
   if (mode === 'forgot') {
     return (
-      <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
-        <div className="relative z-10 w-full max-w-lg">
+      <AuthShell>
+        <div className="w-full max-w-lg">
           <div className="flex flex-col items-center mb-10">
-            <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
-              <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
-                <rect x="9" y="14" width="6" height="6" rx="0.5" />
-              </svg>
-            </div>
-            <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-2">Reset password</h1>
-            <p className="text-surface-variant font-label uppercase tracking-[0.2em] text-[10px]">We'll send you a link</p>
+            <Logo />
+            <h1 className="mt-4 font-extrabold text-3xl tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+              Reset password
+            </h1>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              We'll send you a link
+            </p>
           </div>
-          <div className="bg-surface-container-lowest rounded-xl shadow-2xl overflow-hidden border border-white/5">
+          <Card>
             <div className="px-8 py-8">
               <form onSubmit={handleForgotPassword} className="space-y-5">
                 <div>
-                  <label className={labelCls} htmlFor="reset-email">Email Address</label>
+                  <label style={labelStyle} htmlFor="reset-email">Email Address</label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                    <input id="reset-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="john@contractor.com" className={inputCls} />
+                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                    <input id="reset-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="john@contractor.com" style={inputStyle} />
                   </div>
                 </div>
-                {error && (
-                  <div className="bg-error-container/30 border-l-4 border-error p-3 rounded-r-lg">
-                    <p className="text-sm text-error font-medium">{error}</p>
-                  </div>
-                )}
-                <button type="submit" disabled={submitting} className="w-full amber-gradient text-white font-headline font-bold py-4 rounded-lg shadow-lg disabled:opacity-60">
-                  {submitting ? 'Sending…' : 'Send reset link'}
-                </button>
-                <button type="button" onClick={() => { setMode('auth'); setError(''); }} className="w-full text-sm text-on-surface-variant hover:text-on-surface transition-colors">
+                {error && <ErrorBanner msg={error} />}
+                <PrimaryButton loading={submitting}>{submitting ? 'Sending…' : 'Send reset link'}</PrimaryButton>
+                <button
+                  type="button"
+                  onClick={() => { setMode('auth'); setError(''); }}
+                  className="w-full text-sm transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.75)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                >
                   ← Back to Sign In
                 </button>
               </form>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
-  // ── Sign-up "check email" screen ──────────────────────────────────────────
+  // Check email (post-signup)
   if (checkEmail) {
     return (
-      <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute top-10 right-10 w-64 h-64 border-t border-r border-white/20"></div>
-          <div className="absolute bottom-10 left-10 w-96 h-96 border-b border-l border-white/20"></div>
-        </div>
-        <div className="w-full max-w-sm text-center relative z-10">
+      <AuthShell>
+        <div className="w-full max-w-sm text-center">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
-              <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>mark_email_read</span>
-            </div>
-            <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-1">Check your email</h1>
-            <p className="text-surface-variant font-label uppercase tracking-[0.2em] text-[10px]">Verification Required</p>
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl shadow-2xl p-8">
-            <p className="text-on-surface-variant text-sm mb-1">We sent a confirmation link to</p>
-            <p className="text-on-surface font-semibold text-sm mb-4">{email}</p>
-            <p className="text-on-surface-variant text-xs mb-6 leading-relaxed">
-              Click the link in that email to activate your account. If this email is already registered, use Sign In or reset your password instead.
-            </p>
-            <button
-              onClick={() => { setCheckEmail(false); setTab('login'); }}
-              className="w-full py-3 bg-surface-container-low text-primary font-headline font-bold rounded-lg hover:bg-surface-container transition-colors"
+            <div
+              className="w-16 h-16 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--color-primary)', boxShadow: '0 8px 24px rgba(58,99,73,0.4)', border: '1px solid rgba(255,255,255,0.15)' }}
             >
-              Back to Sign In
-            </button>
+              <MailCheck size={32} className="text-white" />
+            </div>
+            <h1 className="mt-4 font-extrabold text-3xl tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+              Check your email
+            </h1>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Verification Required
+            </p>
           </div>
+          <Card>
+            <div className="px-8 py-8">
+              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>We sent a confirmation link to</p>
+              <p className="font-semibold text-sm mb-4 text-white">{email}</p>
+              <p className="text-xs mb-6 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Click the link in that email to activate your account. If this email is already registered, use Sign In or reset your password instead.
+              </p>
+              <button
+                onClick={() => { setCheckEmail(false); setTab('login'); }}
+                className="w-full py-3 rounded-lg text-sm font-bold transition-colors"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </Card>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-inverse-surface flex items-center justify-center z-50 px-4 overflow-hidden">
-      {/* Blueprint decoration lines */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-10 right-10 w-64 h-64 border-t border-r border-white/5 opacity-20 hidden md:block"></div>
-        <div className="absolute bottom-10 left-10 w-96 h-96 border-b border-l border-white/5 opacity-20 hidden md:block"></div>
+    <AuthShell>
+      {/* Subtle corner lines */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden hidden md:block">
+        <div className="absolute top-10 right-10 w-64 h-64 border-t border-r" style={{ borderColor: 'rgba(255,255,255,0.04)' }} />
+        <div className="absolute bottom-10 left-10 w-96 h-96 border-b border-l" style={{ borderColor: 'rgba(255,255,255,0.04)' }} />
       </div>
 
       <div className="relative z-10 w-full max-w-lg">
-        {/* App Identity */}
+        {/* Brand */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 amber-gradient rounded-xl shadow-xl flex items-center justify-center mb-4 border border-white/10">
-            <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
-              <rect x="9" y="14" width="6" height="6" rx="0.5" />
-            </svg>
-          </div>
-          <h1 className="font-headline font-extrabold text-3xl tracking-tight text-white mb-2">EaveHQ</h1>
-          <p className="text-surface-variant font-label uppercase tracking-[0.2em] text-[10px]">Precision Built for Contractors</p>
+          <Logo />
+          <h1 className="mt-4 font-extrabold text-3xl tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+            EaveHQ
+          </h1>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Precision Built for Contractors
+          </p>
         </div>
 
-        {/* Auth Card */}
-        <div className="bg-surface-container-lowest rounded-xl shadow-2xl overflow-hidden border border-white/5">
+        <Card>
           {/* Tab toggle */}
-          <div className="flex bg-surface-container-low p-1.5 m-4 rounded-lg">
-            <button
-              onClick={() => { setTab('login'); setError(''); }}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all duration-200 ${tab === 'login' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+          <div className="p-4">
+            <div
+              className="flex p-1.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
             >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setTab('signup'); setError(''); }}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all duration-200 ${tab === 'signup' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              Create Account
-            </button>
+              {(['login', 'signup'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setTab(t); setError(''); }}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-md transition-all duration-200"
+                  style={
+                    tab === t
+                      ? { background: '#fff', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }
+                      : { color: 'rgba(255,255,255,0.45)' }
+                  }
+                >
+                  {t === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Form */}
@@ -213,82 +298,103 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
               {tab === 'signup' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>First Name</label>
-                    <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Brighton" className={inputNoPrefixCls} />
+                    <label style={labelStyle}>First Name</label>
+                    <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Brighton" style={inputNoIconStyle} />
                   </div>
                   <div>
-                    <label className={labelCls}>Last Name</label>
-                    <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Jones" className={inputNoPrefixCls} />
+                    <label style={labelStyle}>Last Name</label>
+                    <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Jones" style={inputNoIconStyle} />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className={labelCls} htmlFor="auth-email">Email Address</label>
+                <label style={labelStyle} htmlFor="auth-email">Email Address</label>
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                  </svg>
-                  <input id="auth-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="john@contractor.com" className={inputCls} />
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                  <input id="auth-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="john@contractor.com" style={inputStyle} />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className={labelCls} htmlFor="auth-password">Password</label>
-                  {tab === 'login' && <button type="button" onClick={() => { setMode('forgot'); setError(''); }} className="text-[11px] font-bold text-primary hover:underline">Forgot?</button>}
+                  <label style={labelStyle} htmlFor="auth-password">Password</label>
+                  {tab === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(''); }}
+                      className="text-[11px] font-bold transition-colors"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      Forgot?
+                    </button>
+                  )}
                 </div>
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
-                  <input id="auth-password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className={inputCls} />
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                  <input id="auth-password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
                 </div>
               </div>
 
               {tab === 'signup' && (
-                <div className="bg-primary-container/10 border-l-4 border-primary-container p-4 rounded-r-lg">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-primary-container flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                    </svg>
-                    <p className="text-xs font-semibold text-on-primary-container">Start with 5 free estimates — no credit card required</p>
-                  </div>
+                <div
+                  className="px-4 py-3.5 rounded-lg"
+                  style={{ background: 'rgba(58,99,73,0.25)', border: '1px solid rgba(58,99,73,0.4)' }}
+                >
+                  <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                    Start with 5 free estimates — no credit card required
+                  </p>
                 </div>
               )}
 
-              {error && (
-                <div className="bg-error-container/30 border-l-4 border-error p-3 rounded-r-lg">
-                  <p className="text-sm text-error font-medium">{error}</p>
-                </div>
-              )}
+              {error && <ErrorBanner msg={error} />}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full amber-gradient text-white font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
+              <PrimaryButton loading={submitting}>
                 {submitting
                   ? (tab === 'login' ? 'Signing in…' : 'Creating account…')
                   : (tab === 'login' ? 'Sign In' : 'Create Account')}
-                {!submitting && (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
-                )}
-              </button>
-
+                {!submitting && <ArrowRight size={20} />}
+              </PrimaryButton>
             </form>
           </div>
-        </div>
+        </Card>
 
-        {/* Footnote */}
-        <p className="mt-8 text-center text-surface-variant/60 text-[11px] font-medium max-w-xs mx-auto">
+        <p className="mt-8 text-center text-[11px] font-medium max-w-xs mx-auto" style={{ color: 'rgba(255,255,255,0.25)' }}>
           By continuing, you agree to EaveHQ's{' '}
-          <a className="underline hover:text-white" href="#">Terms of Service</a> and{' '}
-          <a className="underline hover:text-white" href="#">Privacy Policy</a>.
+          <a className="underline hover:opacity-75" href="#">Terms of Service</a> and{' '}
+          <a className="underline hover:opacity-75" href="#">Privacy Policy</a>.
         </p>
       </div>
+    </AuthShell>
+  );
+}
+
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 px-4 overflow-hidden"
+      style={{ background: 'var(--color-primary-dark)', fontFamily: 'var(--font-body)' }}
+    >
+      {children}
     </div>
+  );
+}
+
+function PrimaryButton({ children, loading }: { children: React.ReactNode; loading?: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      className="w-full font-bold py-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+      style={{
+        background: loading ? 'rgba(255,255,255,0.1)' : 'var(--color-accent)',
+        color: loading ? 'rgba(255,255,255,0.4)' : '#fff',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        fontFamily: 'var(--font-display)',
+        boxShadow: loading ? 'none' : '0 4px 14px rgba(217,111,10,0.4)',
+      }}
+    >
+      {children}
+    </button>
   );
 }
