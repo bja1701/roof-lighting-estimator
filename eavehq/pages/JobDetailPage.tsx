@@ -329,7 +329,7 @@ export default function JobDetailPage() {
 
         {/* Status pills row */}
         <div className="flex flex-wrap gap-2 items-center mb-4">
-          <JobStatusBadge status={job.status} />
+          {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} />}
 
           {job.estimate_sent_at != null && (
             <span className="inline-flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 text-on-surface-variant text-xs font-semibold px-3 py-1.5 rounded-full min-h-[36px]">
