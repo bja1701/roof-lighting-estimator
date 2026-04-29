@@ -119,7 +119,7 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
                     title={job.name}
                   >
                     <span className="block truncate">{job.name}</span>
-                    <JobStatusBadge status={job.status} size="sm" />
+                    {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} size="sm" />}
                   </button>
                 ))}
               </div>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h3 className="font-headline font-bold text-on-surface text-base">{job.name}</h3>
-                        <JobStatusBadge status={job.status} size="sm" />
+                        {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} size="sm" />}
                       </div>
                       <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
                         {job.client_name && (
