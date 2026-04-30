@@ -42,7 +42,7 @@ export default function UpgradeModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ background: 'rgba(31,61,44,0.75)' }}>
       <div className="w-full max-w-sm">
         <div
           className="rounded-2xl overflow-hidden border border-white/8"

@@ -16,8 +16,8 @@ export default function ProWelcomeModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center px-4 backdrop-blur-sm"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
+      className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+      style={{ background: 'rgba(31,61,44,0.75)' }}
     >
       <div
         className="w-full max-w-md overflow-hidden rounded-2xl"
@@ -27,8 +27,6 @@ export default function ProWelcomeModal({ onClose }: Props) {
           boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         }}
       >
-        <div className="h-1 w-full" style={{ background: 'var(--color-accent)' }} />
-
         <div className="p-8 text-center">
           <div
             className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"

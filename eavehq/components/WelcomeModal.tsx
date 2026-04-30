@@ -18,7 +18,7 @@ export default function WelcomeModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
       style={{ background: 'rgba(31,61,44,0.75)' }}
     >
       <div

@@ -120,14 +120,13 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-sm"
-      style={{ background: 'rgba(31,61,44,0.6)' }}
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: 'rgba(31,61,44,0.75)' }}
     >
       <div
         className="w-full max-w-md rounded-xl overflow-hidden"
         style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-modal)' }}
       >
-        <div className="h-1 w-full" style={{ background: 'var(--color-accent)' }} />
         <div className="p-7">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">

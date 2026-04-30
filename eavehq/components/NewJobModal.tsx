@@ -69,8 +69,8 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-sm"
-      style={{ background: 'rgba(31,61,44,0.6)' }}
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: 'rgba(31,61,44,0.75)' }}
     >
       <div
         className="w-full max-w-md rounded-xl overflow-hidden"
@@ -80,8 +80,6 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
           boxShadow: 'var(--shadow-modal)',
         }}
       >
-        {/* Accent top stripe */}
-        <div className="h-1 w-full" style={{ background: 'var(--color-accent)' }} />
 
         <div className="p-7">
           {/* Header */}

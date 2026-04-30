@@ -381,13 +381,16 @@ export default function ClientsPage() {
       {/* Merge popup */}
       {mergeCandidates.length > 0 && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-inverse-surface/70 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+          style={{ background: 'rgba(31,61,44,0.75)' }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="merge-dialog-title"
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0px_20px_40px_rgba(17,28,45,0.15)] max-h-[80vh] flex flex-col">
-            <div className="h-1 w-full bg-primary-container" />
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-xl max-h-[80vh] flex flex-col"
+            style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-modal)' }}
+          >
             <div className="p-6 overflow-y-auto flex-1">
               <h2 id="merge-dialog-title" className="font-headline text-xl font-bold text-on-surface mb-1">
                 Email collision detected
