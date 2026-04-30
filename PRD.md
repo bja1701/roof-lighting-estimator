@@ -29,7 +29,7 @@ built specifically for roofline lighting contractors.
 - Founders price ($44.50/mo): `price_1TPqb7AS5bwTFPC7e4OcgDAg`
 - Founders payment link: `https://buy.stripe.com/test_6oU28q3O94ZkauYd5g7ok02`
 
-**Phase priority (as of 2026-04-27):** Live mode migration (Stripe test → live keys) → CRM / job tracking dashboard (Phase 2) → founding member offer page
+**Phase priority (as of 2026-04-29):** Phase 2 DB migration (apply to production) → Live mode migration (Stripe test → live keys) → founding member offer page
 
 ---
 
@@ -93,10 +93,26 @@ None — this is Phase 1 (foundation)
 ---
 
 ## Feature: Phase 2 — CRM / Job Tracking Dashboard
-Status: qa-passed
-Branch: feature/crm-job-tracking-dashboard
+Status: shipped — DB migration pending
+Branch: feature/crm-job-tracking-dashboard (merged → master 2026-04-29)
 Added: 2026-04-27
-Updated: 2026-04-27
+Updated: 2026-04-29
+
+### Post-merge fixes applied (2026-04-29)
+- App.tsx and SharedLayout.tsx nav wiring was missing from developer output — added
+  DashboardPage/ClientsPage/ClientDetailPage routes and Dashboard+Clients nav items
+- DashboardPage query was ordering by `scheduled_date` at DB level; if column doesn't
+  exist yet this silently returns null — fixed to order by `created_at` and sort
+  `scheduled_date` client-side
+- `estimate_sent` status badge was displaying on DashboardPage and JobDetailPage where
+  the established rule suppresses it — fixed on both pages
+
+### What's still needed before Phase 2 is fully live
+- **DB migration not yet applied to production.** The `clients`, `job_notes`,
+  `job_attachments` tables and `scheduled_date`/`client_id` columns on `jobs` are in
+  the migration file but have not been run against the production Supabase project.
+  Until this is done: notes, file uploads, client imports, and scheduled-date sorting
+  will not work. Run: `supabase db push` from `eavehq/` with the project linked.
 
 ### What it does
 Extracts client data from inline job fields into a dedicated `clients` table, and replaces

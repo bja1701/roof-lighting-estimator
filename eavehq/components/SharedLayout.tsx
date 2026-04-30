@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Briefcase, Ruler, Settings, Shield, LogOut, Lock, Zap } from 'lucide-react';
+import { Briefcase, Users, Ruler, Settings, Shield, LogOut, Lock, Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useUpgradeModal } from '../hooks/useUpgradeModal';
@@ -11,7 +11,8 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { label: 'Jobs',      Icon: Briefcase, path: '/' },
+  { label: 'Dashboard', Icon: Briefcase, path: '/' },
+  { label: 'Clients',   Icon: Users,     path: '/clients' },
   { label: 'Estimator', Icon: Ruler,     path: '/estimator' },
   { label: 'Settings',  Icon: Settings,  path: '/settings' },
 ];

@@ -353,7 +353,7 @@ export default function JobDetailPage() {
 
         {/* Status pills */}
         <div className="flex flex-wrap gap-2 items-center mb-4">
-          <JobStatusBadge status={job.status} />
+          {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} />}
 
           {job.estimate_sent_at != null && (
             <span
