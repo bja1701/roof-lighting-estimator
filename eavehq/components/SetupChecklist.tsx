@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, Circle, X } from 'lucide-react';
 import { Profile } from '../hooks/useProfile';
 
 interface Props {
@@ -42,19 +43,36 @@ export default function SetupChecklist({ profile }: Props) {
   };
 
   return (
-    <div className="mb-6 rounded-xl border border-outline-variant/20 bg-surface-container-lowest shadow-sm p-5">
+    <div
+      className="mb-6 rounded-xl p-5"
+      style={{
+        background: 'var(--color-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          <h2 className="font-headline font-bold text-on-surface text-base">Finish setting up EaveHQ</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">Complete these steps to start accepting client payments.</p>
+          <h2
+            className="font-bold text-base"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+          >
+            Finish setting up EaveHQ
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>
+            Complete these steps to start accepting client payments.
+          </p>
         </div>
         <button
           type="button"
           onClick={handleDismiss}
           aria-label="Dismiss setup checklist"
-          className="shrink-0 text-on-surface-variant hover:text-on-surface transition-colors"
+          className="shrink-0 p-1 rounded-lg transition-colors"
+          style={{ color: 'var(--color-slate)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-ink)'; e.currentTarget.style.background = 'var(--color-surface)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-slate)'; e.currentTarget.style.background = 'transparent'; }}
         >
-          <span className="material-symbols-outlined text-xl">close</span>
+          <X size={16} />
         </button>
       </div>
 
@@ -62,13 +80,15 @@ export default function SetupChecklist({ profile }: Props) {
         {steps.map((step, i) => (
           <li key={i} className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
+              {step.done ? (
+                <CheckCircle2 size={18} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+              ) : (
+                <Circle size={18} style={{ color: 'var(--color-slate)', flexShrink: 0 }} />
+              )}
               <span
-                className={`material-symbols-outlined text-base ${step.done ? 'text-green-600' : 'text-on-surface-variant'}`}
-                style={step.done ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                className={`text-sm ${step.done ? 'line-through' : 'font-medium'}`}
+                style={{ color: step.done ? 'var(--color-slate)' : 'var(--color-ink)' }}
               >
-                {step.done ? 'check_circle' : 'radio_button_unchecked'}
-              </span>
-              <span className={`text-sm ${step.done ? 'line-through text-on-surface-variant' : 'text-on-surface font-medium'}`}>
                 {step.label}
               </span>
             </div>
@@ -76,7 +96,10 @@ export default function SetupChecklist({ profile }: Props) {
               <button
                 type="button"
                 onClick={step.action}
-                className="text-xs font-semibold text-primary hover:underline shrink-0"
+                className="text-xs font-semibold shrink-0 transition-colors"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
               >
                 {step.actionLabel}
               </button>
