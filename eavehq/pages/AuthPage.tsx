@@ -9,8 +9,6 @@ interface Props {
   onNewUser: () => void;
 }
 
-const DARK_BG = 'var(--color-primary-dark)';
-
 const inputStyle: React.CSSProperties = {
   width: '100%',
   paddingLeft: '2.5rem',
@@ -41,6 +39,50 @@ const labelStyle: React.CSSProperties = {
   color: 'rgba(255,255,255,0.45)',
   marginBottom: '6px',
 };
+
+function Logo() {
+  return (
+    <div
+      className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{
+        background: 'var(--color-accent)',
+        boxShadow: '0 8px 24px rgba(217,111,10,0.35)',
+        border: '1px solid rgba(255,255,255,0.15)',
+      }}
+    >
+      <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
+        <rect x="9" y="14" width="6" height="6" rx="0.5" />
+      </svg>
+    </div>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ErrorBanner({ msg }: { msg: string }) {
+  return (
+    <div
+      className="px-4 py-3 rounded-lg"
+      style={{ background: 'rgba(201,64,64,0.15)', border: '1px solid rgba(201,64,64,0.3)' }}
+    >
+      <p className="text-sm font-medium" style={{ color: '#f87171' }}>{msg}</p>
+    </div>
+  );
+}
 
 export default function AuthPage({ onSuccess, onNewUser }: Props) {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
@@ -86,44 +128,6 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
       setCheckEmail(true);
     }
   };
-
-  const Logo = () => (
-    <div
-      className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-      style={{
-        background: 'var(--color-accent)',
-        boxShadow: '0 8px 24px rgba(217,111,10,0.35)',
-        border: '1px solid rgba(255,255,255,0.15)',
-      }}
-    >
-      <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-        <path d="M12 2L1 9l2 1.5V20h18V10.5L23 9 12 2zm0 2.5L20 10v8H4v-8l8-5.5z" />
-        <rect x="9" y="14" width="6" height="6" rx="0.5" />
-      </svg>
-    </div>
-  );
-
-  const Card = ({ children }: { children: React.ReactNode }) => (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
-      }}
-    >
-      {children}
-    </div>
-  );
-
-  const ErrorBanner = ({ msg }: { msg: string }) => (
-    <div
-      className="px-4 py-3 rounded-lg"
-      style={{ background: 'rgba(201,64,64,0.15)', border: '1px solid rgba(201,64,64,0.3)' }}
-    >
-      <p className="text-sm font-medium" style={{ color: '#f87171' }}>{msg}</p>
-    </div>
-  );
 
   // Forgot sent
   if (mode === 'forgot-sent') {
