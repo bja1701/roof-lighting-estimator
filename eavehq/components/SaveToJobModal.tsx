@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Save, X, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ensureProfileRowExists } from '../utils/ensureProfile';
@@ -8,8 +9,26 @@ import { useEstimatorStore } from '../store/useEstimatorStore';
 interface Job { id: string; name: string; address: string | null; }
 interface Props { onSaved: () => void; onClose: () => void; }
 
-const inputCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
-const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  color: 'var(--color-ink)',
+  fontSize: '0.875rem',
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.1em',
+  color: 'var(--color-slate)',
+  marginBottom: '6px',
+};
 
 function resolveAddressForJob(
   formattedFromSearch: string | null,
@@ -36,15 +55,8 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
   const { user } = useAuth();
   const { profile, incrementEstimates } = useProfile();
   const {
-    nodes,
-    lines,
-    totalLength3D,
-    estimatedCost,
-    pricePerFt,
-    controllerFee,
-    includeController,
-    satelliteCenter,
-    estimateSiteAddress,
+    nodes, lines, totalLength3D, estimatedCost, pricePerFt,
+    controllerFee, includeController, satelliteCenter, estimateSiteAddress,
   } = useEstimatorStore();
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -82,10 +94,7 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
     const ensured = await ensureProfileRowExists(user);
     if (!ensured.ok) {
       setSubmitting(false);
-      setError(
-        ensured.error ??
-          'Your account profile is still syncing. Refresh the page and try again, or contact support.'
-      );
+      setError(ensured.error ?? 'Your account profile is still syncing. Refresh and try again.');
       return;
     }
     let jobId = selectedJobId;
@@ -94,15 +103,7 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
       if (jobErr) { setError(jobErr.message); setSubmitting(false); return; }
       jobId = data.id;
     }
-    const canvasState = {
-      nodes,
-      lines,
-      pricePerFt,
-      controllerFee,
-      includeController,
-      satelliteCenter,
-      estimateSiteAddress,
-    };
+    const canvasState = { nodes, lines, pricePerFt, controllerFee, includeController, satelliteCenter, estimateSiteAddress };
     const { error: quoteErr } = await supabase.from('quotes').insert({
       job_id: jobId, label: label.trim() || 'Estimate', line_items: buildLineItems(),
       notes: notes.trim() || null, price_per_foot: pricePerFt, controller_fee: controllerFee,
@@ -110,95 +111,167 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
       total_price: estimatedCost, canvas_state: canvasState,
     });
     if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
-
     const jobAddress = await resolveAddressForJob(estimateSiteAddress, satelliteCenter);
-    const { error: jobAddrErr } = await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
-    if (jobAddrErr) { setError(jobAddrErr.message); setSubmitting(false); return; }
-
+    await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
     await incrementEstimates();
     setSubmitting(false);
     onSaved();
   };
 
   return (
-    <div className="fixed inset-0 bg-inverse-surface/70 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
-      <div className="bg-surface-container-lowest rounded-xl shadow-[0px_20px_40px_rgba(17,28,45,0.15)] border border-outline-variant/10 w-full max-w-md overflow-hidden">
-        <div className="h-1 w-full amber-gradient"></div>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: 'rgba(31,61,44,0.75)' }}
+    >
+      <div
+        className="w-full max-w-md rounded-xl overflow-hidden"
+        style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-modal)' }}
+      >
         <div className="p-7">
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-primary-container/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary-container text-lg">save</span>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(58,99,73,0.1)', color: 'var(--color-primary)' }}>
+                <Save size={18} />
               </div>
-              <h2 className="font-headline font-bold text-xl text-on-surface">Save Estimate</h2>
+              <h2 className="font-bold text-xl" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+                Save Estimate
+              </h2>
             </div>
-            <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-lg hover:bg-surface-container-low">
-              <span className="material-symbols-outlined text-base">close</span>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: 'var(--color-slate)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-ink)'; e.currentTarget.style.background = 'var(--color-surface)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-slate)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <X size={16} />
             </button>
           </div>
 
           {atLimit ? (
             <div className="text-center py-6">
-              <span className="material-symbols-outlined text-4xl text-error mb-3 block">block</span>
-              <p className="font-headline font-bold text-on-surface mb-2">Free estimate limit reached</p>
-              <p className="text-on-surface-variant text-sm mb-5">You've used all 5 free estimates. Contact us to upgrade your account.</p>
-              <button onClick={onClose} className="px-6 py-2.5 bg-surface-container-low text-on-surface font-medium text-sm rounded-lg hover:bg-surface-container transition-colors">Close</button>
+              <AlertCircle size={40} className="mx-auto mb-3" style={{ color: 'var(--color-destructive)' }} />
+              <p className="font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+                Free estimate limit reached
+              </p>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-slate)' }}>
+                You've used all 5 free estimates. Contact us to upgrade your account.
+              </p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+              >
+                Close
+              </button>
             </div>
           ) : (
             <div className="space-y-5">
               {/* Summary */}
-              <div className="bg-surface-container-low rounded-xl p-4 flex items-center justify-between">
+              <div
+                className="rounded-xl p-4 flex items-center justify-between"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+              >
                 <div>
-                  <p className="text-[10px] font-label uppercase tracking-wider text-on-surface-variant">Total linear ft</p>
-                  <p className="text-xl font-headline font-bold text-on-surface">{totalLength3D.toFixed(1)} ft</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--color-slate)' }}>Total linear ft</p>
+                  <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-ink)' }}>
+                    {totalLength3D.toFixed(1)} ft
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-label uppercase tracking-wider text-on-surface-variant">Estimated cost</p>
-                  <p className="text-xl font-headline font-bold text-primary-container">${estimatedCost.toFixed(2)}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--color-slate)' }}>Estimated cost</p>
+                  <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>
+                    ${estimatedCost.toFixed(2)}
+                  </p>
                 </div>
               </div>
 
               {/* Job mode toggle */}
               {jobs.length > 0 && (
-                <div className="flex bg-surface-container-low p-1 rounded-lg">
-                  <button onClick={() => setMode('existing')} className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'existing' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}>Existing Job</button>
-                  <button onClick={() => setMode('new')} className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'new' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}>New Job</button>
+                <div
+                  className="flex p-1 rounded-lg"
+                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                >
+                  {(['existing', 'new'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setMode(m)}
+                      className="flex-1 py-2 text-sm font-medium rounded-md transition-all"
+                      style={
+                        mode === m
+                          ? { background: 'var(--color-card)', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                          : { color: 'var(--color-slate)' }
+                      }
+                    >
+                      {m === 'existing' ? 'Existing Job' : 'New Job'}
+                    </button>
+                  ))}
                 </div>
               )}
 
               {mode === 'existing' ? (
                 <div>
-                  <label className={labelCls}>Job</label>
-                  <select value={selectedJobId} onChange={e => setSelectedJobId(e.target.value)} className={inputCls}>
+                  <label style={labelStyle}>Job</label>
+                  <select value={selectedJobId} onChange={e => setSelectedJobId(e.target.value)} style={inputStyle}>
                     {jobs.map(j => <option key={j.id} value={j.id}>{j.name}{j.address ? ` — ${j.address}` : ''}</option>)}
                   </select>
                 </div>
               ) : (
                 <div>
-                  <label className={labelCls}>Job Name *</label>
-                  <input type="text" value={newJobName} onChange={e => setNewJobName(e.target.value)} placeholder="Johnson Residence" className={inputCls} />
+                  <label style={labelStyle}>Job Name *</label>
+                  <input type="text" value={newJobName} onChange={e => setNewJobName(e.target.value)} placeholder="Johnson Residence" style={inputStyle} />
                 </div>
               )}
 
               <div>
-                <label className={labelCls}>Estimate Label</label>
-                <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Estimate" className={inputCls} />
+                <label style={labelStyle}>Estimate Label</label>
+                <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Estimate" style={inputStyle} />
               </div>
 
               <div>
-                <label className={labelCls}>Notes</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Includes clip installation, excludes power run." rows={2} className={`${inputCls} resize-none`} />
+                <label style={labelStyle}>Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="e.g. Includes clip installation, excludes power run."
+                  rows={2}
+                  className="resize-none focus:outline-none"
+                  style={{ ...inputStyle, display: 'block' }}
+                />
               </div>
 
               {error && (
-                <div className="bg-error-container/30 border-l-4 border-error p-3 rounded-r-lg">
-                  <p className="text-sm text-error font-medium">{error}</p>
+                <div
+                  className="px-4 py-3 rounded-lg"
+                  style={{ background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.2)' }}
+                >
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{error}</p>
                 </div>
               )}
 
               <div className="flex gap-3 pt-1">
-                <button onClick={onClose} className="flex-1 py-3 bg-surface-container-low text-on-surface-variant font-medium text-sm rounded-lg hover:bg-surface-container transition-colors">Cancel</button>
-                <button onClick={handleSave} disabled={submitting} className="flex-1 amber-gradient text-white font-headline font-bold py-3 rounded-lg shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-3 text-sm font-medium rounded-lg transition-colors"
+                  style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-border)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-surface)')}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={submitting}
+                  className="flex-1 font-bold py-3 rounded-lg transition-all active:scale-95"
+                  style={{
+                    background: submitting ? 'var(--color-border)' : 'var(--color-accent)',
+                    color: submitting ? 'var(--color-slate)' : '#fff',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-display)',
+                    boxShadow: submitting ? 'none' : '0 2px 8px rgba(217,111,10,0.3)',
+                  }}
+                >
                   {submitting ? 'Saving…' : 'Save Estimate'}
                 </button>
               </div>

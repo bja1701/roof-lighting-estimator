@@ -144,36 +144,55 @@ serve(async (req) => {
       return { id: est.id, label: est.label, original: raw, discounted };
     });
 
-    // 7. Build simplified email body — one portal button + one invoice link
+    // 7. Build email body — one portal button + one invoice link
     const htmlBody = `
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 0">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;padding:40px 48px;max-width:560px">
-        <tr><td>
-          <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827">Your estimate from ${companyName}</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#6b7280">Hi ${clientName},</p>
+<body style="margin:0;padding:0;background:#f5f2ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f2ed;padding:48px 0">
+    <tr><td align="center" style="padding:0 16px">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+
+        <!-- Brand header -->
+        <tr><td style="background:#1f3d2c;border-radius:12px 12px 0 0;padding:22px 40px">
+          <p style="margin:0;font-size:19px;font-weight:800;color:#ffffff;letter-spacing:-0.3px">EaveHQ</p>
+          <p style="margin:3px 0 0;font-size:11px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.12em">Roofline Lighting</p>
+        </td></tr>
+
+        <!-- Accent stripe -->
+        <tr><td style="height:3px;background:#d96f0a;font-size:0;line-height:0">&nbsp;</td></tr>
+
+        <!-- Card body -->
+        <tr><td style="background:#ffffff;border-radius:0 0 12px 12px;border:1px solid #dedad4;border-top:none;padding:40px 40px 36px">
+
+          <p style="margin:0 0 6px;font-size:22px;font-weight:800;color:#1a1a1a;letter-spacing:-0.4px">Your estimate from ${companyName}</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#5a6070">Hi ${clientName},</p>
+
           ${customMessageBlock}
-          <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6">
+
+          <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.65">
             Your estimate options are ready. Click the button below to review and choose the option that works best for you.
           </p>
+
           <table cellpadding="0" cellspacing="0" style="margin:0 0 16px">
             <tr><td>
               <a href="${portalUrl}"
-                 style="display:inline-block;background:#f59e0b;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:8px">
+                 style="display:inline-block;background:#d96f0a;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:8px;letter-spacing:0.01em">
                 View Your Options &rarr;
               </a>
             </td></tr>
           </table>
-          <p style="margin:0 0 28px;font-size:13px">
-            <a href="${invoiceUrl}" style="color:#6b7280;text-decoration:underline">View Full Invoice &rarr;</a>
+
+          <p style="margin:0 0 32px;font-size:13px">
+            <a href="${invoiceUrl}" style="color:#5a6070;text-decoration:underline">View Full Invoice &rarr;</a>
           </p>
-          <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6">
-            If you have any questions, reply to this email or contact your contractor directly.
+
+          <p style="margin:0;padding-top:20px;border-top:1px solid #dedad4;font-size:13px;color:#5a6070;line-height:1.6">
+            If you have any questions, reply to this email or contact your contractor directly.<br>
+            <span style="color:#a8b0bc">Sent via EaveHQ</span>
           </p>
+
         </td></tr>
       </table>
     </td></tr>

@@ -8,10 +8,7 @@ const SearchBar: React.FC = () => {
 
   useEffect(() => {
     const win = window as any;
-
-    if (!win.google || !win.google.maps || !win.google.maps.places) {
-      return;
-    }
+    if (!win.google || !win.google.maps || !win.google.maps.places) return;
 
     if (inputRef.current) {
       autocompleteRef.current = new win.google.maps.places.Autocomplete(inputRef.current, {
@@ -21,11 +18,9 @@ const SearchBar: React.FC = () => {
 
       const listener = autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
-
         if (place && place.geometry && place.geometry.location) {
           const location = place.geometry.location;
           const newLatLng = { lat: location.lat(), lng: location.lng() };
-
           setMapCenter(newLatLng);
           setStreetViewPosition(newLatLng);
           reset();
@@ -34,12 +29,8 @@ const SearchBar: React.FC = () => {
       });
 
       return () => {
-        if (listener) {
-          win.google.maps.event.removeListener(listener);
-        }
-        if (autocompleteRef.current) {
-          win.google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        }
+        if (listener) win.google.maps.event.removeListener(listener);
+        if (autocompleteRef.current) win.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       };
     }
   }, [setMapCenter, setStreetViewPosition, setEstimateSiteAddress, reset]);
@@ -50,40 +41,45 @@ const SearchBar: React.FC = () => {
         ref={inputRef}
         type="text"
         placeholder="Enter address..."
-        className="w-full rounded-md border border-slate-200 bg-white px-4 py-2 text-sm text-on-surface shadow-sm placeholder:text-on-surface-variant/80 transition-all focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-container/90 focus:ring-offset-2 focus:ring-offset-inverse-surface"
+        className="w-full rounded-lg px-4 py-2 text-sm transition-all focus:outline-none"
+        style={{
+          background: 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          color: '#fff',
+          caretColor: '#fff',
+        }}
+        onFocus={e => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)';
+        }}
+        onBlur={e => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
+        }}
       />
 
       <style>{`
         .pac-container {
           background-color: #ffffff !important;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--color-border);
           border-top: none;
-          border-radius: 0 0 8px 8px;
+          border-radius: 0 0 var(--radius-md) var(--radius-md);
           margin-top: 4px;
-          box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
-          font-family: inherit;
+          box-shadow: var(--shadow-dropdown);
+          font-family: var(--font-body);
           z-index: 9999 !important;
         }
         .pac-item {
-          border-top: 1px solid #f1f5f9;
+          border-top: 1px solid var(--color-border);
           padding: 10px 12px;
-          color: #475569;
+          color: var(--color-slate);
           cursor: pointer;
           transition: background-color 0.15s;
         }
-        .pac-item:first-child {
-          border-top: none;
-        }
-        .pac-item:hover {
-          background-color: #f8fafc;
-        }
-        .pac-item-query {
-          color: #0f172a;
-          font-size: 14px;
-        }
-        .pac-icon {
-          filter: none;
-        }
+        .pac-item:first-child { border-top: none; }
+        .pac-item:hover { background-color: var(--color-surface); }
+        .pac-item-query { color: var(--color-ink); font-size: 14px; }
+        .pac-icon { filter: none; }
       `}</style>
     </div>
   );

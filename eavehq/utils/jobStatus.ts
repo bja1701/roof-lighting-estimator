@@ -2,7 +2,10 @@ import { JobStatus } from '../types/job';
 
 interface StatusConfig {
   label: string;
-  badgeCls: string;
+  badgeStyle: {
+    background: string;
+    color: string;
+  };
   nextManualStatus: JobStatus | null;
   nextManualLabel: string | null;
 }
@@ -10,37 +13,55 @@ interface StatusConfig {
 export const JOB_STATUS_CONFIG: Record<JobStatus, StatusConfig> = {
   estimate_sent: {
     label: 'Estimate Sent',
-    badgeCls: 'bg-surface-container text-on-surface-variant',
+    badgeStyle: {
+      background: 'rgba(90,96,112,0.12)',
+      color: 'var(--color-slate)',
+    },
     nextManualStatus: 'scheduled',
     nextManualLabel: 'Mark as Scheduled',
   },
   deposit_paid: {
     label: 'Deposit Paid',
-    badgeCls: 'bg-secondary-container text-on-secondary-container',
+    badgeStyle: {
+      background: 'rgba(61,158,106,0.12)',
+      color: 'var(--color-success)',
+    },
     nextManualStatus: 'scheduled',
     nextManualLabel: 'Mark as Scheduled',
   },
   scheduled: {
     label: 'Scheduled',
-    badgeCls: 'bg-tertiary-container/50 text-tertiary',
+    badgeStyle: {
+      background: 'rgba(58,99,73,0.12)',
+      color: 'var(--color-primary)',
+    },
     nextManualStatus: 'in_progress',
     nextManualLabel: 'Mark as Started',
   },
   in_progress: {
     label: 'In Progress',
-    badgeCls: 'bg-primary-container/30 text-primary',
+    badgeStyle: {
+      background: 'rgba(217,111,10,0.12)',
+      color: 'var(--color-accent)',
+    },
     nextManualStatus: 'complete',
     nextManualLabel: 'Mark Complete',
   },
   complete: {
     label: 'Complete',
-    badgeCls: 'bg-primary-container/60 text-primary',
+    badgeStyle: {
+      background: 'rgba(61,158,106,0.12)',
+      color: 'var(--color-success)',
+    },
     nextManualStatus: null,
     nextManualLabel: null,
   },
   final_paid: {
     label: 'Final Paid',
-    badgeCls: 'bg-green-100 text-green-800',
+    badgeStyle: {
+      background: 'rgba(61,158,106,0.16)',
+      color: 'var(--color-success)',
+    },
     nextManualStatus: null,
     nextManualLabel: null,
   },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { CheckCircle, CreditCard, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { calcDiscountedPrice, discountLabel } from '../utils/discount';
 
@@ -59,19 +60,13 @@ export default function ClientPortalPage() {
 
   const fetchPortalData = async (portalToken: string) => {
     setLoading(true);
-
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .select('id, user_id, address, status, deposit_percent, deposit_amount, deposit_paid_at, portal_token')
       .eq('portal_token', portalToken)
       .single();
 
-    if (jobError || !jobData) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-
+    if (jobError || !jobData) { setNotFound(true); setLoading(false); return; }
     setJob(jobData as JobData);
 
     const [{ data: quotesData }, { data: profileData }] = await Promise.all([
@@ -91,8 +86,6 @@ export default function ClientPortalPage() {
     setQuotes(loadedQuotes);
     setContractor((profileData as ContractorProfile) ?? null);
     if (loadedQuotes.length > 0) {
-      // If the URL contains ?estimate=<id> and that id exists in this job's quotes, pre-select it.
-      // Otherwise fall back to the first quote.
       const preSelected =
         deepLinkedEstimateId && loadedQuotes.some(q => q.id === deepLinkedEstimateId)
           ? deepLinkedEstimateId
@@ -105,19 +98,12 @@ export default function ClientPortalPage() {
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId) ?? null;
   const selectedEffectivePrice =
     selectedQuote?.total_price != null
-      ? calcDiscountedPrice(
-          selectedQuote.total_price,
-          selectedQuote.discount_amount,
-          selectedQuote.discount_type,
-        )
+      ? calcDiscountedPrice(selectedQuote.total_price, selectedQuote.discount_amount, selectedQuote.discount_type)
       : null;
   const depositDollars =
     selectedEffectivePrice != null && job
-      ? (selectedEffectivePrice * (job.deposit_percent / 100))
+      ? selectedEffectivePrice * (job.deposit_percent / 100)
       : null;
-
-  // For final payment: use stored deposit_amount if available, else estimate from percent
-  // Base final calculation on the discounted price
   const finalDollars =
     selectedEffectivePrice != null && job
       ? selectedEffectivePrice - (
@@ -174,32 +160,45 @@ export default function ClientPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-surface)' }}>
+        <div
+          className="w-8 h-8 rounded-full animate-spin"
+          style={{ border: '2px solid var(--color-border)', borderTopColor: 'var(--color-accent)' }}
+        />
       </div>
     );
   }
 
   if (notFound || !job) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-surface)' }}>
         <div className="text-center max-w-sm">
-          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ background: 'var(--color-border)' }}
+          >
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--color-slate)' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-gray-800 mb-2">Quote link not found</h1>
-          <p className="text-gray-500 text-sm">This quote link is no longer valid. Please contact your contractor for an updated link.</p>
+          <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>
+            Quote link not found
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-slate)' }}>
+            This quote link is no longer valid. Please contact your contractor for an updated link.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--color-surface)', fontFamily: 'var(--font-body)', color: 'var(--color-ink)' }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-5">
+      <header
+        className="px-4 py-5"
+        style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}
+      >
         <div className="max-w-lg mx-auto flex items-center gap-4">
           {contractor?.logo_url && (
             <img
@@ -209,119 +208,101 @@ export default function ClientPortalPage() {
             />
           )}
           <div>
-            <p className="font-bold text-gray-900 text-lg leading-tight">
+            <p className="font-bold text-lg leading-tight" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>
               {contractor?.company_name ?? 'Your Contractor'}
             </p>
             {job.address && (
-              <p className="text-gray-500 text-sm mt-0.5">{job.address}</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--color-slate)' }}>{job.address}</p>
             )}
           </div>
         </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-8 space-y-6">
-        {/* Final payment received banner */}
+        {/* Final paid banner */}
         {isFinalPaid && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3">
-            <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="font-bold text-green-800">Final payment received</p>
-              <p className="text-green-700 text-sm mt-0.5">
-                Thank you — your account is settled in full!
-              </p>
-            </div>
-          </div>
+          <SuccessBanner>
+            <p className="font-bold" style={{ color: '#1a5c38' }}>Final payment received</p>
+            <p className="text-sm mt-0.5" style={{ color: '#2d7a50' }}>
+              Thank you — your account is settled in full!
+            </p>
+          </SuccessBanner>
         )}
 
-        {/* Deposit paid banner — show when deposit paid but job not yet complete/final */}
+        {/* Deposit paid, waiting for install */}
         {isDepositPaid && !isReadyForFinal && !isFinalPaid && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3">
-            <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="font-bold text-green-800">Deposit received</p>
-              <p className="text-green-700 text-sm mt-0.5">
-                We'll be in touch to schedule your install!
-              </p>
-            </div>
-          </div>
+          <SuccessBanner>
+            <p className="font-bold" style={{ color: '#1a5c38' }}>Deposit received</p>
+            <p className="text-sm mt-0.5" style={{ color: '#2d7a50' }}>
+              We'll be in touch to schedule your install!
+            </p>
+          </SuccessBanner>
         )}
 
-        {/* Final payment due — job is complete, awaiting final payment */}
+        {/* Final payment due */}
         {isReadyForFinal && !isFinalPaid && (
           <>
-            {/* Deposit already paid banner above final section */}
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-              <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-green-800 text-sm font-semibold">Deposit received — installation complete</p>
-            </div>
+            <SuccessBanner compact>
+              <p className="text-sm font-semibold" style={{ color: '#1a5c38' }}>
+                Deposit received — installation complete
+              </p>
+            </SuccessBanner>
 
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Final Payment Due</h2>
-              <p className="text-gray-500 text-sm">Your installation is complete. Please pay the remaining balance to close out your project.</p>
+              <h2
+                className="text-lg font-bold mb-1"
+                style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+              >
+                Final Payment Due
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--color-slate)' }}>
+                Your installation is complete. Please pay the remaining balance to close out your project.
+              </p>
             </div>
 
             {selectedQuote && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+              <PayCard>
                 {finalDollars != null && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Remaining balance</span>
-                    <span className="font-bold text-gray-900 text-base">
+                    <span style={{ color: 'var(--color-slate)' }}>Remaining balance</span>
+                    <span
+                      className="font-bold text-base"
+                      style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-mono)' }}
+                    >
                       ${finalDollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
-
-                {payFinalError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-                    <p className="text-red-700 text-sm">{payFinalError}</p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handlePayFinal}
-                  disabled={payingFinal}
-                  className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 text-base"
-                >
-                  {payingFinal ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Preparing checkout…
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      Pay Final Balance
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-gray-400 text-xs">
-                  Secure payment powered by Stripe
-                </p>
-              </div>
+                {payFinalError && <ErrorBanner>{payFinalError}</ErrorBanner>}
+                <PayButton onClick={handlePayFinal} loading={payingFinal}>
+                  Pay Final Balance
+                </PayButton>
+                <StripeBadge />
+              </PayCard>
             )}
           </>
         )}
 
-        {/* Quote selection — only when deposit not yet paid */}
+        {/* Quote selection */}
         {!isDepositPaid && (
           <>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Choose an estimate</h2>
-              <p className="text-gray-500 text-sm">Select the option that works best for you, then pay your deposit to get on the schedule.</p>
+              <h2
+                className="text-lg font-bold mb-1"
+                style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+              >
+                Choose an estimate
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--color-slate)' }}>
+                Select the option that works best for you, then pay your deposit to get on the schedule.
+              </p>
             </div>
 
             {quotes.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
+              <div
+                className="rounded-xl p-8 text-center text-sm"
+                style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', color: 'var(--color-slate)' }}
+              >
                 No estimates available yet. Check back soon.
               </div>
             ) : (
@@ -332,58 +313,66 @@ export default function ClientPortalPage() {
                     ? calcDiscountedPrice(quote.total_price, quote.discount_amount, quote.discount_type)
                     : null;
                   const hasDiscount = effectivePrice != null && quote.total_price != null && effectivePrice < quote.total_price;
+
                   return (
                     <button
                       key={quote.id}
                       type="button"
                       onClick={() => setSelectedQuoteId(quote.id)}
-                      className={[
-                        'w-full text-left rounded-xl border-2 p-5 transition-all',
-                        isSelected
-                          ? 'border-amber-500 bg-amber-50 shadow-sm'
-                          : 'border-gray-200 bg-white hover:border-gray-300',
-                      ].join(' ')}
+                      className="w-full text-left rounded-xl transition-all"
+                      style={{
+                        background: isSelected ? 'rgba(217,111,10,0.05)' : 'var(--color-card)',
+                        border: `2px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                        padding: '20px',
+                        boxShadow: isSelected ? '0 2px 8px rgba(217,111,10,0.12)' : undefined,
+                      }}
+                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-slate)'; }}
+                      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)'; }}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className={[
-                            'w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center',
-                            isSelected ? 'border-amber-500 bg-amber-500' : 'border-gray-300',
-                          ].join(' ')}>
-                            {isSelected && (
-                              <div className="w-2 h-2 bg-white rounded-full" />
-                            )}
+                          {/* Radio */}
+                          <div
+                            className="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                            style={{
+                              borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border)',
+                              background: isSelected ? 'var(--color-accent)' : 'transparent',
+                            }}
+                          >
+                            {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{quote.label}</p>
+                            <p className="font-bold" style={{ color: 'var(--color-ink)' }}>{quote.label}</p>
                             {quote.total_linear_ft != null && (
-                              <p className="text-gray-500 text-sm mt-0.5">
+                              <p className="text-sm mt-0.5" style={{ color: 'var(--color-slate)' }}>
                                 {Math.round(quote.total_linear_ft).toLocaleString()} linear ft
                               </p>
                             )}
                             {job.deposit_percent != null && effectivePrice != null && (
-                              <p className="text-gray-500 text-sm mt-0.5">
+                              <p className="text-sm mt-0.5" style={{ color: 'var(--color-slate)' }}>
                                 Deposit due: ${(effectivePrice * (job.deposit_percent / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             )}
                             {hasDiscount && quote.discount_amount != null && quote.discount_type != null && (
-                              <p className="text-green-600 text-sm font-semibold mt-0.5">
+                              <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-success)' }}>
                                 {discountLabel(quote.discount_amount, quote.discount_type, quote.total_price!)}
                               </p>
                             )}
                             {quote.notes && (
-                              <p className="text-gray-500 text-sm mt-1 leading-snug">{quote.notes}</p>
+                              <p className="text-sm mt-1 leading-snug" style={{ color: 'var(--color-slate)' }}>
+                                {quote.notes}
+                              </p>
                             )}
                           </div>
                         </div>
                         <div className="flex-shrink-0 text-right">
                           {hasDiscount && quote.total_price != null && (
-                            <p className="text-gray-400 text-sm line-through">
+                            <p className="text-sm line-through" style={{ color: 'var(--color-slate)' }}>
                               ${quote.total_price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </p>
                           )}
                           {effectivePrice != null && (
-                            <p className="font-bold text-gray-900 text-lg">
+                            <p className="font-bold text-lg" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-mono)' }}>
                               ${effectivePrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </p>
                           )}
@@ -395,55 +384,115 @@ export default function ClientPortalPage() {
               </div>
             )}
 
-            {/* Deposit summary + pay button */}
+            {/* Pay deposit */}
             {selectedQuote && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+              <PayCard>
                 {depositDollars != null && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
+                    <span style={{ color: 'var(--color-slate)' }}>
                       Deposit required ({job.deposit_percent}%)
                     </span>
-                    <span className="font-bold text-gray-900 text-base">
+                    <span
+                      className="font-bold text-base"
+                      style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-mono)' }}
+                    >
                       ${depositDollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
-
-                {payError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-                    <p className="text-red-700 text-sm">{payError}</p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handlePayDeposit}
-                  disabled={paying}
-                  className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 text-base"
-                >
-                  {paying ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Preparing checkout…
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      Pay Deposit
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-gray-400 text-xs">
-                  Secure payment powered by Stripe
-                </p>
-              </div>
+                {payError && <ErrorBanner>{payError}</ErrorBanner>}
+                <PayButton onClick={handlePayDeposit} loading={paying}>
+                  Pay Deposit
+                </PayButton>
+                <StripeBadge />
+              </PayCard>
             )}
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="max-w-lg mx-auto px-4 pb-10 text-center">
+        <p className="text-xs" style={{ color: 'var(--color-border)' }}>
+          Powered by{' '}
+          <span style={{ color: 'var(--color-slate)' }}>
+            <span style={{ color: 'var(--color-primary)' }}>Eave</span>HQ
+          </span>
+        </p>
+      </footer>
     </div>
+  );
+}
+
+function SuccessBanner({ children, compact }: { children: React.ReactNode; compact?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl flex items-start gap-3 ${compact ? 'p-4' : 'p-5'}`}
+      style={{ background: 'rgba(61,158,106,0.1)', border: '1px solid rgba(61,158,106,0.25)' }}
+    >
+      <CheckCircle size={compact ? 18 : 22} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--color-success)' }} />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function PayCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="rounded-xl p-5 space-y-4"
+      style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PayButton({ children, onClick, loading }: { children: React.ReactNode; onClick: () => void; loading: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className="w-full font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-base active:scale-[0.98]"
+      style={{
+        background: loading ? 'var(--color-border)' : 'var(--color-accent)',
+        color: loading ? 'var(--color-slate)' : '#fff',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        fontFamily: 'var(--font-display)',
+        boxShadow: loading ? 'none' : '0 4px 14px rgba(217,111,10,0.35)',
+      }}
+    >
+      {loading ? (
+        <>
+          <Loader2 size={20} className="animate-spin" />
+          Preparing checkout…
+        </>
+      ) : (
+        <>
+          <CreditCard size={20} />
+          {children}
+        </>
+      )}
+    </button>
+  );
+}
+
+function ErrorBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="rounded-lg px-4 py-3"
+      style={{ background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.25)' }}
+    >
+      <p className="text-sm" style={{ color: 'var(--color-destructive)' }}>{children}</p>
+    </div>
+  );
+}
+
+function StripeBadge() {
+  return (
+    <p className="text-center text-xs" style={{ color: 'var(--color-border)' }}>
+      Secure payment powered by{' '}
+      <span style={{ color: 'var(--color-slate)' }}>Stripe</span>
+    </p>
   );
 }
