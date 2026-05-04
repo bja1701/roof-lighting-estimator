@@ -1,0 +1,5 @@
+{
+  "entry": ["index.tsx", "App.tsx"],
+  "project": ["**/*.{ts,tsx}"],
+  "ignore": ["**/*.test.*", "tests/**", "supabase/functions/**"]
+}
