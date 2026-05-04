@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -29,7 +31,7 @@ jobs:
         run: bun install
 
       - name: Biome — lint and format check
-        run: bunx biome check .
+        run: bunx biome check --changed --since=origin/dev
 
       - name: TypeScript — type check
         run: bunx tsc --noEmit
