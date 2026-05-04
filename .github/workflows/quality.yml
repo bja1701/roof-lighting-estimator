@@ -12,6 +12,9 @@ jobs:
   quality:
     name: Lint, Type-check, Dead Code
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./eavehq
 
     steps:
       - name: Checkout
