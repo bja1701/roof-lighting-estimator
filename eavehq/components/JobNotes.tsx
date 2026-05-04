@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { CloudUpload, FileImage, Loader2, Lock, MessageSquare, Paperclip } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { JobNote, JobAttachment } from '../types/client';
 
@@ -38,25 +39,25 @@ function AttachmentRow({ attachment, jobUserId }: { attachment: JobAttachment; j
   useEffect(() => { void fetchUrl(); }, [attachment.storage_path]);
 
   const isImage = attachment.mime_type?.startsWith('image/') ?? false;
+  const AttachmentIcon = isImage ? FileImage : Paperclip;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-surface-container-low px-3 py-2">
-      <span className="material-symbols-outlined text-base text-on-surface-variant shrink-0">
-        {isImage ? 'image' : 'attach_file'}
-      </span>
+    <div className="flex items-center gap-3 rounded-lg px-3 py-2" style={{ background: 'var(--color-surface)' }}>
+      <AttachmentIcon size={16} aria-hidden="true" className="shrink-0" style={{ color: 'var(--color-slate)' }} />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-on-surface truncate">{attachment.filename}</p>
+        <p className="text-xs font-medium truncate" style={{ color: 'var(--color-ink)' }}>{attachment.filename}</p>
       </div>
       {loading && (
-        <span className="material-symbols-outlined animate-spin text-base text-on-surface-variant">progress_activity</span>
+        <Loader2 className="animate-spin" size={16} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
       )}
       {!loading && loadError && (
         <button
           type="button"
           onClick={() => void fetchUrl()}
-          className="text-xs text-error hover:underline min-h-[36px] px-2"
+          className="text-xs hover:underline min-h-[36px] px-2"
+          style={{ color: 'var(--color-destructive)' }}
         >
-          Failed — retry
+          Failed, retry
         </button>
       )}
       {!loading && !loadError && url && (
@@ -64,7 +65,8 @@ function AttachmentRow({ attachment, jobUserId }: { attachment: JobAttachment; j
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-semibold text-primary hover:underline min-h-[36px] flex items-center"
+          className="text-xs font-semibold hover:underline min-h-[36px] flex items-center"
+          style={{ color: 'var(--color-primary)' }}
         >
           Open
         </a>
@@ -162,22 +164,33 @@ function NoteCard({
   };
 
   return (
-    <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--color-card)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined text-base ${isPrivate ? 'text-amber-500' : 'text-primary'}`}>
-            {isPrivate ? 'lock' : 'chat_bubble'}
-          </span>
-          <h3 className="font-headline font-bold text-sm text-on-surface">
+          {isPrivate ? (
+            <Lock size={16} aria-hidden="true" style={{ color: 'var(--color-warning)' }} />
+          ) : (
+            <MessageSquare size={16} aria-hidden="true" style={{ color: 'var(--color-primary)' }} />
+          )}
+          <h3 className="font-bold text-sm" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>
             {isPrivate ? 'Private Notes' : 'Customer Notes'}
           </h3>
           {!isPrivate && (
-            <span className="text-[10px] bg-primary-container/20 text-primary rounded-full px-2 py-0.5 font-label uppercase tracking-wider">
+            <span
+              className="text-[10px] rounded-full px-2 py-0.5 font-semibold uppercase tracking-wider"
+              style={{ background: 'rgba(58,99,73,0.1)', color: 'var(--color-primary)' }}
+            >
               Visible to client
             </span>
           )}
         </div>
-        <div className="text-[10px] text-on-surface-variant">
+        <div className="text-[10px]" style={{ color: 'var(--color-slate)' }}>
           {saving ? 'Saving…' : savedAt ? 'Saved' : ''}
         </div>
       </div>
@@ -187,7 +200,12 @@ function NoteCard({
         value={body}
         onChange={e => handleBodyChange(e.target.value)}
         placeholder={isPrivate ? 'Private contractor notes…' : 'Notes visible to the client in their portal…'}
-        className="w-full rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary-container resize-none transition-all"
+        className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none resize-none transition-all"
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          color: 'var(--color-ink)',
+        }}
       />
 
       {/* File attachments (private notes only) */}
@@ -198,9 +216,10 @@ function NoteCard({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-50 min-h-[36px]"
+              className="flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-50 min-h-[36px]"
+              style={{ color: 'var(--color-slate)' }}
             >
-              <span className="material-symbols-outlined text-base">attach_file</span>
+              <Paperclip size={15} aria-hidden="true" />
               {uploading ? 'Uploading…' : 'Attach file / photo'}
             </button>
             <input
@@ -212,7 +231,7 @@ function NoteCard({
             />
           </div>
           {uploadError && (
-            <p className="text-xs text-error mb-2">{uploadError}</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-destructive)' }}>{uploadError}</p>
           )}
           {attachments.length > 0 && (
             <div className="space-y-1.5">
@@ -289,8 +308,8 @@ export default function JobNotes({ jobId, contractorId }: Props) {
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="h-24 bg-surface-container-low rounded-xl animate-pulse" />
-        <div className="h-24 bg-surface-container-low rounded-xl animate-pulse" />
+        <div className="h-24 rounded-xl animate-pulse" style={{ background: 'var(--color-surface)' }} />
+        <div className="h-24 rounded-xl animate-pulse" style={{ background: 'var(--color-surface)' }} />
       </div>
     );
   }
@@ -346,10 +365,16 @@ export function ClientUploadsSection({ jobId }: { jobId: string }) {
   if (uploads.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--color-card)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
       <div className="flex items-center gap-2 mb-3">
-        <span className="material-symbols-outlined text-base text-on-surface-variant">cloud_upload</span>
-        <h3 className="font-headline font-bold text-sm text-on-surface">Client Uploads</h3>
+        <CloudUpload size={16} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
+        <h3 className="font-bold text-sm" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>Client Uploads</h3>
       </div>
       <div className="space-y-1.5">
         {uploads.map(a => (

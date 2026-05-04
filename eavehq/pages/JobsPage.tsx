@@ -133,7 +133,7 @@ export default function JobsPage() {
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1
-              className="text-3xl font-bold tracking-tight"
+              className="text-4xl font-black tracking-tight"
               style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
             >
               Jobs
@@ -165,7 +165,7 @@ export default function JobsPage() {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm transition-all outline-none"
             style={{
-              background: '#fff',
+              background: 'var(--color-card)',
               border: '1.5px solid var(--color-border)',
               color: 'var(--color-ink)',
               fontFamily: 'var(--font-body)',
@@ -179,7 +179,7 @@ export default function JobsPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
+              <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
                 <div className="h-28" style={{ background: 'var(--color-surface)' }} />
                 <div className="p-4 space-y-2.5">
                   <div className="h-4 rounded" style={{ background: 'var(--color-surface)', width: '70%' }} />
@@ -189,7 +189,7 @@ export default function JobsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 rounded-2xl" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
+          <div className="flex flex-col items-center justify-center py-20 rounded-2xl" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'var(--color-surface)' }}>
               <Building2 size={26} style={{ color: 'var(--color-border)' }} />
             </div>
@@ -218,7 +218,7 @@ export default function JobsPage() {
               <div
                 key={job.id}
                 className="group rounded-xl overflow-hidden cursor-pointer transition-all duration-200"
-                style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+                style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
                 onClick={() => navigate(`/jobs/${job.id}`)}
                 onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-dropdown)')}
                 onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-card)')}
@@ -232,7 +232,7 @@ export default function JobsPage() {
                     disabled={deletingId === job.id}
                     onClick={e => openDeleteConfirm(job, e)}
                     className="absolute left-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-lg opacity-0 pointer-events-none shadow transition-all group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none"
-                    style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--color-destructive)', backdropFilter: 'blur(4px)' }}
+                    style={{ background: 'var(--color-card)', color: 'var(--color-destructive)', border: '1px solid rgba(201,64,64,0.18)' }}
                   >
                     {deletingId === job.id
                       ? <Loader2 size={15} className="animate-spin" />
@@ -292,16 +292,16 @@ export default function JobsPage() {
       {jobPendingDelete && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-          style={{ background: 'rgba(26,26,26,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(31,61,44,0.75)' }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-job-title"
           onClick={e => e.target === e.currentTarget && cancelDeleteConfirm()}
         >
-          <div className="w-full max-w-md overflow-hidden rounded-xl" style={{ background: '#fff', boxShadow: 'var(--shadow-modal)' }}>
+          <div className="w-full max-w-md overflow-hidden rounded-xl" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
             <div className="p-6">
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0" style={{ background: '#fff0f0' }}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0" style={{ background: 'rgba(201,64,64,0.08)' }}>
                   <Trash2 size={20} style={{ color: 'var(--color-destructive)' }} />
                 </div>
                 <h2 id="delete-job-title" className="text-lg font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>

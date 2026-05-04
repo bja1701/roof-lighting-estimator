@@ -17,6 +17,7 @@ import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
 import JobStatusBadge from '../components/JobStatusBadge';
+import JobStreetViewImage from '../components/JobStreetViewImage';
 import { Job, JobStatus } from '../types/job';
 import { JOB_STATUS_CONFIG } from '../utils/jobStatus';
 
@@ -56,6 +57,7 @@ interface ConfirmDialog {
 }
 
 export default function JobDetailPage() {
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile }  = useProfile();
@@ -328,28 +330,70 @@ export default function JobDetailPage() {
         </nav>
 
         {/* Job header */}
-        <div className="mb-4">
-          <h1
-            className="text-3xl font-bold tracking-tight leading-tight mb-2"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+        {job.address ? (
+          <section
+            className="relative mb-5 min-h-[220px] overflow-hidden rounded-2xl"
+            style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
           >
-            {job.name}
-          </h1>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm" style={{ color: 'var(--color-slate)' }}>
-            {job.address && (
-              <span className="flex items-center gap-1"><MapPin size={13} />{job.address}</span>
-            )}
-            {job.notes && (
-              <span className="flex items-center gap-1"><StickyNote size={13} /><em>{job.notes}</em></span>
-            )}
-            {(job.client_name || job.client_email || job.client_phone) && (
-              <span className="flex items-center gap-1">
-                <User size={13} />
-                {[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}
-              </span>
-            )}
+            <JobStreetViewImage
+              address={job.address}
+              jobName={job.name}
+              mapsApiKey={mapsApiKey}
+              width={640}
+              height={360}
+              className="absolute inset-0 h-full w-full"
+              imageClassName="absolute inset-0 h-full w-full object-cover"
+              fallbackClassName="absolute inset-0"
+              fallbackIconSize={44}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(90deg, rgba(31,61,44,0.92) 0%, rgba(31,61,44,0.72) 48%, rgba(31,61,44,0.18) 100%)',
+              }}
+            />
+            <div className="relative flex min-h-[220px] max-w-2xl flex-col justify-end p-5 sm:p-6">
+              <h1
+                className="mb-3 text-4xl font-black leading-tight tracking-tight sm:text-5xl"
+                style={{ fontFamily: 'var(--font-display)', color: '#f7f3ea' }}
+              >
+                {job.name}
+              </h1>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm" style={{ color: 'rgba(247,243,234,0.84)' }}>
+                <span className="flex items-center gap-1.5"><MapPin size={14} />{job.address}</span>
+                {job.notes && (
+                  <span className="flex items-center gap-1.5"><StickyNote size={14} /><em>{job.notes}</em></span>
+                )}
+                {(job.client_name || job.client_email || job.client_phone) && (
+                  <span className="flex items-center gap-1.5">
+                    <User size={14} />
+                    {[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <div className="mb-4">
+            <h1
+              className="text-4xl font-black tracking-tight leading-tight mb-2"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+            >
+              {job.name}
+            </h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm" style={{ color: 'var(--color-slate)' }}>
+              {job.notes && (
+                <span className="flex items-center gap-1"><StickyNote size={13} /><em>{job.notes}</em></span>
+              )}
+              {(job.client_name || job.client_email || job.client_phone) && (
+                <span className="flex items-center gap-1">
+                  <User size={13} />
+                  {[job.client_name, job.client_email, job.client_phone].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Status pills */}
         <div className="flex flex-wrap gap-2 items-center mb-4">
@@ -367,16 +411,25 @@ export default function JobDetailPage() {
           {job.client_opened_at != null && (
             <span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: '#f0faf4', border: '1px solid var(--color-success)', color: 'var(--color-success)' }}
+              style={{ background: 'rgba(61,158,106,0.1)', border: '1px solid rgba(61,158,106,0.28)', color: 'var(--color-success)' }}
             >
               <Eye size={12} />
               Client opened {timeAgo(job.client_opened_at)}
             </span>
           )}
+          {job.estimate_sent_at != null && (
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(217,111,10,0.1)', border: '1px solid rgba(217,111,10,0.22)', color: 'var(--color-accent)' }}
+            >
+              <Send size={12} />
+              {job.followup_count ?? 0} follow-up{(job.followup_count ?? 0) === 1 ? '' : 's'}
+            </span>
+          )}
           {job.deposit_paid_at != null && (
             <span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: '#f0faf4', border: '1px solid var(--color-success)', color: 'var(--color-success)' }}
+              style={{ background: 'rgba(61,158,106,0.1)', border: '1px solid rgba(61,158,106,0.28)', color: 'var(--color-success)' }}
             >
               <CheckCircle size={12} />
               Deposit {new Date(job.deposit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -386,7 +439,7 @@ export default function JobDetailPage() {
           {job.final_paid_at != null && (
             <span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: '#f0faf4', border: '1px solid var(--color-success)', color: 'var(--color-success)' }}
+              style={{ background: 'rgba(61,158,106,0.1)', border: '1px solid rgba(61,158,106,0.28)', color: 'var(--color-success)' }}
             >
               <CheckCircle size={12} />
               Final paid {new Date(job.final_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -417,7 +470,7 @@ export default function JobDetailPage() {
         {(quotes.length > 0 || job.portal_token) && (
           <div
             className="flex flex-wrap gap-3 items-center mb-8 p-4 rounded-xl"
-            style={{ background: '#fff', border: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
           >
             {/* Deposit % */}
             <div className="flex items-center gap-2 text-sm">
@@ -511,7 +564,7 @@ export default function JobDetailPage() {
               { label: 'Total Value', value: `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
               { label: 'Linear Ft', value: `${totalFt.toFixed(0)} ft` },
             ].map(({ label, value }) => (
-              <div key={label} className="px-5 py-4" style={{ background: '#fff' }}>
+              <div key={label} className="px-5 py-4" style={{ background: 'var(--color-card)' }}>
                 <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-slate)' }}>
                   {label}
                 </p>
@@ -548,7 +601,7 @@ export default function JobDetailPage() {
         {quotes.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-20 rounded-xl mb-10"
-            style={{ background: '#fff', border: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: 'var(--color-surface)' }}>
               <FileText size={22} style={{ color: 'var(--color-border)' }} />
@@ -600,7 +653,7 @@ export default function JobDetailPage() {
             disabled={deleting}
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
             style={{ background: 'transparent', border: '1px solid var(--color-destructive)', color: 'var(--color-destructive)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#fff0f0'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,64,64,0.08)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
           >
             {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
@@ -613,13 +666,13 @@ export default function JobDetailPage() {
       {sendOptionsOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-          style={{ background: 'rgba(26,26,26,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(31,61,44,0.75)' }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="send-options-title"
           onClick={e => e.target === e.currentTarget && !sendOptionsSending && setSendOptionsOpen(false)}
         >
-          <div className="w-full max-w-md rounded-xl overflow-hidden" style={{ background: '#fff', boxShadow: 'var(--shadow-modal)' }}>
+          <div className="w-full max-w-md rounded-xl overflow-hidden" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
             <div className="px-6 pt-6 pb-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(58,99,73,0.1)' }}>
@@ -717,12 +770,12 @@ export default function JobDetailPage() {
       {confirmDialog && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-          style={{ background: 'rgba(26,26,26,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(31,61,44,0.75)' }}
           role="dialog"
           aria-modal="true"
           onClick={e => e.target === e.currentTarget && setConfirmDialog(null)}
         >
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: '#fff', boxShadow: 'var(--shadow-modal)' }}>
+          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
             <h2 className="text-base font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
               {confirmDialog.title}
             </h2>

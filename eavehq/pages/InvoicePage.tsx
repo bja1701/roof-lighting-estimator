@@ -161,7 +161,7 @@ export default function InvoicePage() {
                     src={contractor.logo_url}
                     alt="Company logo"
                     className="h-14 w-14 object-contain rounded-lg flex-shrink-0"
-                    style={{ background: '#fff', padding: '4px' }}
+                    style={{ background: 'var(--color-card)', padding: '4px' }}
                   />
                 )}
                 <div>

@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { CalendarDays, ChevronLeft, ChevronRight, Home, MapPin, Plus, Search, User, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SharedLayout from '../components/SharedLayout';
 import NewJobModal from '../components/NewJobModal';
 import SetupChecklist from '../components/SetupChecklist';
 import JobStatusBadge from '../components/JobStatusBadge';
+import JobStreetViewImage from '../components/JobStreetViewImage';
 import { useProfile } from '../hooks/useProfile';
 import { Job, JobStatus } from '../types/job';
 
@@ -76,19 +78,21 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
         <button
           type="button"
           onClick={prevWeek}
-          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-surface-container-low transition-colors min-h-[44px] min-w-[44px]"
+          className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+          style={{ color: 'var(--color-slate)' }}
           aria-label="Previous week"
         >
-          <span className="material-symbols-outlined text-xl text-on-surface-variant">chevron_left</span>
+          <ChevronLeft size={20} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
         </button>
-        <span className="text-sm font-semibold text-on-surface">{weekLabel}</span>
+        <span className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>{weekLabel}</span>
         <button
           type="button"
           onClick={nextWeek}
-          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-surface-container-low transition-colors min-h-[44px] min-w-[44px]"
+          className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+          style={{ color: 'var(--color-slate)' }}
           aria-label="Next week"
         >
-          <span className="material-symbols-outlined text-xl text-on-surface-variant">chevron_right</span>
+          <ChevronRight size={20} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
         </button>
       </div>
 
@@ -100,11 +104,17 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
           return (
             <div key={i} className="flex flex-col min-h-[120px]">
               {/* Day header */}
-              <div className={`text-center mb-1 rounded-lg py-1 ${isToday ? 'bg-primary text-white' : ''}`}>
-                <p className={`text-[10px] font-label uppercase tracking-wider ${isToday ? 'text-white' : 'text-on-surface-variant'}`}>
+              <div
+                className="text-center mb-1 rounded-lg py-1"
+                style={isToday ? { background: 'var(--color-primary)', color: '#fff' } : undefined}
+              >
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: isToday ? '#fff' : 'var(--color-slate)' }}
+                >
                   {DAY_NAMES[i]}
                 </p>
-                <p className={`text-sm font-bold ${isToday ? 'text-white' : 'text-on-surface'}`}>
+                <p className="text-sm font-bold" style={{ color: isToday ? '#fff' : 'var(--color-ink)' }}>
                   {date.getDate()}
                 </p>
               </div>
@@ -115,7 +125,12 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
                     key={job.id}
                     type="button"
                     onClick={() => onJobClick(job.id)}
-                    className="w-full text-left rounded-md bg-primary-container/20 border border-primary-container/30 px-1.5 py-1 text-[10px] sm:text-xs font-medium text-on-surface hover:bg-primary-container/40 transition-colors min-h-[44px] flex flex-col justify-center"
+                    className="w-full text-left rounded-md px-1.5 py-1 text-[10px] sm:text-xs font-medium transition-colors min-h-[44px] flex flex-col justify-center"
+                    style={{
+                      background: 'rgba(58,99,73,0.1)',
+                      border: '1px solid rgba(58,99,73,0.18)',
+                      color: 'var(--color-ink)',
+                    }}
                     title={job.name}
                   >
                     <span className="block truncate">{job.name}</span>
@@ -129,7 +144,7 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
       </div>
 
       {jobs.filter(j => j.scheduled_date).length === 0 && (
-        <p className="text-center text-on-surface-variant text-sm mt-8">
+        <p className="text-center text-sm mt-8" style={{ color: 'var(--color-slate)' }}>
           No jobs with a scheduled date yet. Open a job and set a scheduled date to see it here.
         </p>
       )}
@@ -140,6 +155,7 @@ function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: st
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
@@ -201,15 +217,17 @@ export default function DashboardPage() {
         {estimateLimitBanner && (
           <div
             role="status"
-            className="mb-6 flex flex-col gap-3 rounded-xl border border-outline-variant/20 bg-tertiary-container/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            className="mb-6 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            style={{ background: 'rgba(196,122,26,0.12)', border: '1px solid rgba(196,122,26,0.22)' }}
           >
-            <p className="text-sm text-on-surface">
+            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
               You&apos;ve used all <strong>5</strong> free estimates. The estimator is locked until you upgrade.
             </p>
             <button
               type="button"
               onClick={() => setEstimateLimitBanner(false)}
-              className="shrink-0 rounded-lg bg-surface-container-lowest px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-low"
+              className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              style={{ background: 'var(--color-card)', color: 'var(--color-slate)' }}
             >
               Dismiss
             </button>
@@ -219,41 +237,61 @@ export default function DashboardPage() {
         {/* Page header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-headline text-4xl font-black tracking-tight text-on-surface">Dashboard</h1>
-            <p className="text-on-surface-variant text-sm mt-1">All your jobs in one place.</p>
+            <h1
+              className="text-4xl font-black tracking-tight"
+              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+            >
+              Dashboard
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-slate)' }}>All your jobs in one place.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full gap-2 sm:w-auto sm:justify-end">
             <button
               type="button"
               onClick={() => navigate('/clients')}
-              className="flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-lowest py-2.5 px-4 font-headline text-sm font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low min-h-[44px]"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold leading-none transition-colors sm:flex-none"
+              style={{
+                background: 'var(--color-card)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-ink)',
+                boxShadow: 'var(--shadow-card)',
+                fontFamily: 'var(--font-body)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-card)')}
             >
-              <span className="material-symbols-outlined text-lg">contacts</span>
+              <Users size={17} aria-hidden="true" style={{ color: 'var(--color-primary)' }} />
               Clients
             </button>
             <button
               type="button"
               onClick={() => setShowNewJob(true)}
-              className="amber-gradient flex items-center gap-2 rounded-lg py-2.5 px-5 font-headline font-bold text-white shadow-md transition-all active:scale-95 min-h-[44px]"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold leading-none text-white transition-opacity active:scale-[0.98] sm:flex-none"
+              style={{
+                background: 'var(--color-accent)',
+                boxShadow: '0 2px 8px rgba(217,111,10,0.28)',
+                fontFamily: 'var(--font-body)',
+              }}
             >
-              <span className="material-symbols-outlined text-xl">add</span>
+              <Plus size={18} aria-hidden="true" />
               New Job
             </button>
           </div>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 mb-6 bg-surface-container-low rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: 'var(--color-surface)' }}>
           {(['list', 'schedule'] as DashboardTab[]).map(t => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all min-h-[40px] capitalize ${
-                tab === t
-                  ? 'bg-white shadow-sm text-on-surface'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
+              className="px-5 py-2 rounded-lg text-sm font-semibold transition-all min-h-[40px] capitalize"
+              style={{
+                background: tab === t ? 'var(--color-card)' : 'transparent',
+                boxShadow: tab === t ? 'var(--shadow-card)' : 'none',
+                color: tab === t ? 'var(--color-ink)' : 'var(--color-slate)',
+              }}
             >
               {t === 'list' ? 'List' : 'Schedule'}
             </button>
@@ -264,30 +302,50 @@ export default function DashboardPage() {
           <>
             {/* Filter + Search */}
             <div className="mb-5 flex flex-col sm:flex-row gap-3">
-              <div className="flex gap-1 bg-surface-container-low rounded-xl p-1">
+              <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--color-surface)' }}>
                 {FILTERS.map(f => (
                   <button
                     key={f.key}
                     type="button"
                     onClick={() => setFilter(f.key)}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all min-h-[40px] ${
-                      filter === f.key
-                        ? 'bg-white shadow-sm text-on-surface'
-                        : 'text-on-surface-variant hover:text-on-surface'
-                    }`}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-all min-h-[40px]"
+                    style={{
+                      background: filter === f.key ? 'var(--color-card)' : 'transparent',
+                      boxShadow: filter === f.key ? 'var(--shadow-card)' : 'none',
+                      color: filter === f.key ? 'var(--color-ink)' : 'var(--color-slate)',
+                    }}
                   >
                     {f.label}
                   </button>
                 ))}
               </div>
-              <div className="flex-1 relative min-w-0">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  size={18}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--color-slate)' }}
+                />
                 <input
                   type="text"
                   placeholder="Search jobs, clients, addresses…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-surface-container-lowest border-none rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface placeholder:text-on-surface-variant/50 transition-all min-h-[44px]"
+                  className="min-h-[48px] w-full rounded-xl py-3 pl-12 pr-4 text-sm outline-none transition-all placeholder:text-stone-400"
+                  style={{
+                    background: 'var(--color-card)',
+                    border: '1.5px solid var(--color-border)',
+                    color: 'var(--color-ink)',
+                    boxShadow: 'var(--shadow-card)',
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(58,99,73,0.14)';
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+                  }}
                 />
               </div>
             </div>
@@ -296,19 +354,29 @@ export default function DashboardPage() {
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-surface-container-lowest rounded-xl shadow-sm p-4 animate-pulse">
-                    <div className="h-4 bg-surface-container-low rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-surface-container-low rounded w-1/2" />
+                  <div
+                    key={i}
+                    className="rounded-xl p-4 animate-pulse"
+                    style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-card)' }}
+                  >
+                    <div className="h-4 rounded w-1/3 mb-2" style={{ background: 'var(--color-surface)' }} />
+                    <div className="h-3 rounded w-1/2" style={{ background: 'var(--color-surface)' }} />
                   </div>
                 ))}
               </div>
             ) : visibleJobs.length === 0 ? (
-              <div className="text-center py-20 bg-surface-container-lowest rounded-2xl shadow-sm">
-                <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-4 block">home_work</span>
-                <h3 className="font-headline font-bold text-lg text-on-surface mb-1">
+              <div
+                className="text-center py-20 rounded-2xl"
+                style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-card)' }}
+              >
+                <Home className="mx-auto mb-4" size={44} aria-hidden="true" style={{ color: 'rgba(90,96,112,0.32)' }} />
+                <h3
+                  className="font-bold text-lg mb-1"
+                  style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+                >
                   {filter === 'archived' ? 'No archived jobs' : `No ${filter} jobs`}
                 </h3>
-                <p className="text-on-surface-variant text-sm">
+                <p className="text-sm" style={{ color: 'var(--color-slate)' }}>
                   {filter === 'active' ? (
                     <>Create your first job to get started.</>
                   ) : filter === 'completed' ? (
@@ -320,7 +388,8 @@ export default function DashboardPage() {
                 {filter === 'active' && (
                   <button
                     onClick={() => setShowNewJob(true)}
-                    className="mt-6 amber-gradient text-white font-headline font-bold py-3 px-8 rounded-lg shadow-md active:scale-95 transition-all min-h-[44px]"
+                    className="mt-6 text-white font-bold py-3 px-8 rounded-lg active:scale-95 transition-all min-h-[44px]"
+                    style={{ background: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
                   >
                     Create First Job
                   </button>
@@ -333,37 +402,86 @@ export default function DashboardPage() {
                     key={job.id}
                     type="button"
                     onClick={() => navigate(`/jobs/${job.id}`)}
-                    className="w-full text-left bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 px-4 py-4 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center gap-3 min-h-[44px]"
+                    className="group flex min-h-[64px] w-full flex-col gap-3 rounded-xl px-4 py-4 text-left transition-colors sm:flex-row sm:items-center"
+                    style={{
+                      background: 'var(--color-card)',
+                      border: '1px solid var(--color-border)',
+                      boxShadow: 'var(--shadow-card)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-primary)')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-headline font-bold text-on-surface text-base">{job.name}</h3>
-                        {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} size="sm" />}
+                        <h3
+                          className="font-bold text-base"
+                          style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+                        >
+                          {job.name}
+                        </h3>
                       </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
+                      <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--color-slate)' }}>
                         {job.client_name && (
                           <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">person</span>
+                            <User size={13} aria-hidden="true" />
                             {job.client_name}
                           </span>
                         )}
                         {job.address && (
                           <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">location_on</span>
+                            <MapPin size={13} aria-hidden="true" />
                             {job.address}
                           </span>
                         )}
                         {job.scheduled_date && (
                           <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">calendar_today</span>
+                            <CalendarDays size={13} aria-hidden="true" />
                             {new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-on-surface-variant shrink-0">
-                      <span className="text-xs">{job.quote_count ?? 0} estimate{(job.quote_count ?? 0) !== 1 ? 's' : ''}</span>
-                      <span className="material-symbols-outlined text-lg">chevron_right</span>
+                    <div className="flex w-full shrink-0 items-center justify-end gap-3 self-start sm:w-[300px] sm:self-center">
+                      {job.address && (
+                        <div
+                          className="h-16 w-28 shrink-0 overflow-hidden rounded-lg"
+                          style={{ border: '1px solid var(--color-border)' }}
+                        >
+                          <JobStreetViewImage
+                            address={job.address}
+                            jobName={job.name}
+                            mapsApiKey={mapsApiKey}
+                            width={210}
+                            height={120}
+                            className="h-full w-full"
+                            imageClassName="h-full w-full object-cover scale-150"
+                            fallbackIconSize={22}
+                          />
+                        </div>
+                      )}
+                      <div className="flex w-[120px] shrink-0 flex-col items-center gap-1">
+                        <JobStatusBadge status={job.status} size="sm" />
+                        <span
+                          className="w-full rounded-md px-2 py-1 text-center text-xs font-medium tabular-nums whitespace-nowrap"
+                          style={{
+                            background: 'var(--color-surface)',
+                            color: 'var(--color-slate)',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        >
+                          {job.quote_count ?? 0} estimate{(job.quote_count ?? 0) !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <span
+                        className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+                        style={{
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-primary)',
+                          background: 'var(--color-card)',
+                        }}
+                      >
+                        <ChevronRight size={18} aria-hidden="true" />
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -372,7 +490,14 @@ export default function DashboardPage() {
           </>
         ) : (
           /* Schedule tab */
-          <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 p-4 overflow-x-auto">
+          <div
+            className="rounded-xl p-4 overflow-x-auto"
+            style={{
+              background: 'var(--color-card)',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
             <WeeklyCalendar jobs={jobs} onJobClick={id => navigate(`/jobs/${id}`)} />
           </div>
         )}

@@ -101,8 +101,7 @@ const EditorToolbar: React.FC = () => {
       <div
         className="flex items-center gap-1 p-1.5 rounded-2xl"
         style={{
-          background: 'rgba(15,25,40,0.88)',
-          backdropFilter: 'blur(12px)',
+          background: 'rgba(15,25,40,0.94)',
           border: '1px solid rgba(255,255,255,0.12)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}
@@ -124,7 +123,7 @@ const EditorToolbar: React.FC = () => {
             <Icon size={18} />
             <span
               className="absolute -top-9 left-1/2 -translate-x-1/2 text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity"
-              style={{ background: '#000', color: '#fff' }}
+              style={{ background: 'rgba(15,25,40,0.96)', color: '#f7f3ea' }}
             >
               {label} ({shortcut})
             </span>
@@ -146,7 +145,7 @@ const EditorToolbar: React.FC = () => {
             <Icon size={18} />
             <span
               className="absolute -top-9 left-1/2 -translate-x-1/2 text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity"
-              style={{ background: '#000', color: '#fff' }}
+              style={{ background: 'rgba(15,25,40,0.96)', color: '#f7f3ea' }}
             >
               {label} ({shortcut})
             </span>

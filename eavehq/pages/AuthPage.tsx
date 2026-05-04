@@ -286,7 +286,7 @@ export default function AuthPage({ onSuccess, onNewUser }: Props) {
                   className="flex-1 py-2.5 text-sm font-semibold rounded-md transition-all duration-200"
                   style={
                     tab === t
-                      ? { background: '#fff', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }
+                      ? { background: 'var(--color-card)', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }
                       : { color: 'rgba(255,255,255,0.45)' }
                   }
                 >

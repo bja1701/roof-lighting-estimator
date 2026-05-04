@@ -140,99 +140,91 @@ const VisualPitchTool: React.FC = () => {
           </g>
         </svg>
 
-        {/* Pitch readout */}
-        <div
-          className="absolute right-4 top-4 z-20 min-w-[140px] rounded-lg p-3 text-right"
-          style={{
-            background: 'rgba(15,25,40,0.9)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          }}
-        >
-          <div className="mb-1 text-[10px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Measured Pitch
-          </div>
-          <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: '#fff' }}>
-            {calculatedPitch}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-            {diff.toFixed(1)}°
-          </div>
-        </div>
       </div>
 
       {/* Controls area */}
       <div
-        className="relative z-30 flex h-auto flex-col gap-4 p-4"
+        className="relative z-30 grid h-auto gap-3 p-3 sm:grid-cols-[116px_minmax(0,1fr)_170px] sm:items-stretch"
         style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',
           background: 'var(--color-primary-dark)',
-          boxShadow: '0 -4px 24px rgba(0,0,0,0.35)',
+          boxShadow: '0 -4px 18px rgba(0,0,0,0.28)',
         }}
       >
-        <div className="grid grid-cols-1 gap-4">
+        <div
+          className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 sm:block"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.52)' }}>
+            Pitch
+          </div>
+          <div className="text-2xl font-semibold leading-none sm:mt-1" style={{ fontFamily: 'var(--font-mono)', color: '#fff' }}>
+            {calculatedPitch}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+            {diff.toFixed(1)}°
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
           {/* Reference slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wide" style={{ color: '#fbbf24' }}>
-              <span>Horizon / Reference</span>
-              <span style={{ fontFamily: 'var(--font-mono)' }}>{refAngle}°</span>
+          <div className="min-w-0 rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                <span className="flex h-4 w-4 items-center justify-center rounded-full text-[10px]" style={{ background: 'rgba(251,191,36,0.14)', color: '#fbbf24' }}>1</span>
+                Horizon
+              </span>
+              <span className="rounded-md px-1.5 py-0.5 text-[11px]" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}>{refAngle}°</span>
             </div>
             <input
               type="range" min="0" max="180" step="0.5"
               value={refAngle}
               onChange={(e) => setRefAngle(parseFloat(e.target.value))}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-yellow-400"
-              style={{ background: 'rgba(255,255,255,0.15)' }}
+              className="visual-pitch-slider visual-pitch-slider--reference w-full"
+              aria-label="Horizon reference angle"
             />
           </div>
 
           {/* Slope slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wide" style={{ color: '#f87171' }}>
-              <span>Roof Slope</span>
-              <span style={{ fontFamily: 'var(--font-mono)' }}>{slopeAngle}°</span>
+          <div className="min-w-0 rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                <span className="flex h-4 w-4 items-center justify-center rounded-full text-[10px]" style={{ background: 'rgba(248,113,113,0.14)', color: '#f87171' }}>2</span>
+                Roof edge
+              </span>
+              <span className="rounded-md px-1.5 py-0.5 text-[11px]" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', fontFamily: 'var(--font-mono)' }}>{slopeAngle}°</span>
             </div>
             <input
               type="range" min="0" max="180" step="0.5"
               value={slopeAngle}
               onChange={(e) => setSlopeAngle(parseFloat(e.target.value))}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-red-500"
-              style={{ background: 'rgba(255,255,255,0.15)' }}
+              className="visual-pitch-slider visual-pitch-slider--slope w-full"
+              aria-label="Roof slope angle"
             />
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="my-1" />
-
-        {/* Apply button */}
-        <div className="flex justify-between items-center gap-4">
-          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        {/* Apply control */}
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 sm:flex-col sm:items-stretch sm:justify-between" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="min-w-0 flex-1 text-[11px] sm:flex-none" style={{ color: 'rgba(255,255,255,0.56)' }}>
             {selectedLine ? (
-              <span>
-                Apply to{' '}
-                <span className="font-bold" style={{ color: 'var(--color-accent)' }}>
-                  Line {selectedLine.id.slice(0, 4)}
-                </span>
-              </span>
+              <span className="block truncate">Apply to line <span style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>{selectedLine.id.slice(0, 4)}</span></span>
             ) : (
-              <span className="italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                Select a line on map to apply
-              </span>
+              <span className="block truncate">Select a map line first</span>
             )}
           </div>
 
           <button
             disabled={!selectedLineId}
             onClick={handleApplyPitch}
-            className="flex-1 rounded-lg py-2.5 text-xs font-bold uppercase tracking-wide transition-all active:scale-95"
+            className="h-9 shrink-0 rounded-lg px-4 text-xs font-bold transition-all active:scale-[0.98]"
             style={
               selectedLineId
                 ? {
-                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
+                    background: 'var(--color-accent)',
                     color: '#fff',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: '0 4px 12px rgba(58,99,73,0.4)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: '0 2px 8px rgba(217,111,10,0.28)',
                   }
                 : {
                     background: 'rgba(255,255,255,0.06)',

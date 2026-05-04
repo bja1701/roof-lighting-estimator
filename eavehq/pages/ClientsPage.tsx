@@ -250,17 +250,17 @@ export default function ClientsPage() {
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4" style={{ marginBottom: '24px' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '1.75rem',
-            color: 'var(--color-ink)',
-            lineHeight: 1.15,
-            letterSpacing: '-0.02em',
-            margin: 0,
-          }}>
-            Clients
-          </h1>
+          <div>
+            <h1
+              className="text-4xl font-black tracking-tight"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+            >
+              Clients
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-slate)' }}>
+              Client records, contact details, and import tools.
+            </p>
+          </div>
 
           <button
             type="button"

@@ -224,11 +224,11 @@ export default function SettingsPage() {
     <>
       <SharedLayout>
         <div className="max-w-3xl mx-auto px-6 md:px-10 py-10" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-ink)' }}>
-          <div className="mb-12">
-            <h1 className="font-black text-4xl tracking-tight mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+          <div className="mb-10">
+            <h1 className="mb-2 text-4xl font-black tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
               Settings
             </h1>
-            <p className="text-lg" style={{ color: 'var(--color-slate)' }}>
+            <p className="max-w-2xl text-sm mt-1" style={{ color: 'var(--color-slate)' }}>
               Manage your company branding, pricing defaults, and account details.
             </p>
           </div>

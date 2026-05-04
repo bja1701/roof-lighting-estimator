@@ -41,3 +41,46 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.visual-pitch-slider {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+  display: block;
+  height: 3px;
+  outline: none;
+}
+
+.visual-pitch-slider::-webkit-slider-thumb {
+  appearance: none;
+  background: var(--slider-color);
+  border: 2px solid var(--color-primary-dark);
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  height: 14px;
+  width: 14px;
+}
+
+.visual-pitch-slider::-moz-range-thumb {
+  background: var(--slider-color);
+  border: 2px solid var(--color-primary-dark);
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  height: 14px;
+  width: 14px;
+}
+
+.visual-pitch-slider::-moz-range-track {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  height: 3px;
+}
+
+.visual-pitch-slider--reference {
+  --slider-color: #fbbf24;
+}
+
+.visual-pitch-slider--slope {
+  --slider-color: #f87171;
+}

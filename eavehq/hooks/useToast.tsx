@@ -17,7 +17,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_STYLES: Record<ToastType, { bg: string; borderColor: string; Icon: React.ElementType; iconColor: string }> = {
   success: { bg: '#f0faf4', borderColor: 'var(--color-success)',     Icon: CheckCircle,  iconColor: 'var(--color-success)' },
-  error:   { bg: '#fff0f0', borderColor: 'var(--color-destructive)', Icon: AlertCircle,  iconColor: 'var(--color-destructive)' },
+  error:   { bg: 'rgba(201,64,64,0.08)', borderColor: 'var(--color-destructive)', Icon: AlertCircle,  iconColor: 'var(--color-destructive)' },
   warning: { bg: '#fff8f0', borderColor: 'var(--color-warning)',     Icon: AlertTriangle,iconColor: 'var(--color-warning)' },
   info:    { bg: '#f0f4ff', borderColor: '#4a7fcc',                  Icon: Info,         iconColor: '#4a7fcc' },
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, CalendarDays, ChevronRight, Home, Loader2, Mail, MapPin, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SharedLayout from '../components/SharedLayout';
 import JobStatusBadge from '../components/JobStatusBadge';
@@ -35,8 +36,8 @@ export default function ClientDetailPage() {
   if (loading) {
     return (
       <SharedLayout>
-        <div className="flex items-center justify-center py-32 text-on-surface-variant">
-          <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+        <div className="flex items-center justify-center py-32" style={{ color: 'var(--color-slate)' }}>
+          <Loader2 className="mr-2 animate-spin" size={18} aria-hidden="true" />
           Loading…
         </div>
       </SharedLayout>
@@ -46,7 +47,7 @@ export default function ClientDetailPage() {
   if (!client) {
     return (
       <SharedLayout>
-        <div className="flex items-center justify-center py-32 text-on-surface-variant">Client not found.</div>
+        <div className="flex items-center justify-center py-32" style={{ color: 'var(--color-slate)' }}>Client not found.</div>
       </SharedLayout>
     );
   }
@@ -57,53 +58,72 @@ export default function ClientDetailPage() {
     <SharedLayout>
       <div className="px-4 sm:px-6 md:px-10 py-8 max-w-4xl mx-auto">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-on-surface-variant text-sm font-label uppercase tracking-widest mb-6">
+        <nav
+          className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest mb-6"
+          style={{ color: 'var(--color-slate)' }}
+        >
           <button
             onClick={() => navigate('/clients')}
-            className="hover:text-primary transition-colors flex items-center gap-1 min-h-[44px]"
+            className="transition-colors flex items-center gap-1 min-h-[44px]"
+            style={{ color: 'var(--color-primary)' }}
           >
-            <span className="material-symbols-outlined text-base">arrow_back</span>
+            <ArrowLeft size={15} aria-hidden="true" />
             Clients
           </button>
           <span>/</span>
-          <span className="text-on-surface font-bold">{client.name}</span>
+          <span className="font-bold" style={{ color: 'var(--color-ink)' }}>{client.name}</span>
         </nav>
 
         {/* Client card */}
-        <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 p-6 mb-8">
+        <div
+          className="rounded-2xl p-6 mb-8"
+          style={{
+            background: 'var(--color-card)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl amber-gradient flex items-center justify-center shrink-0">
-              <span className="text-white font-headline font-bold text-2xl">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              <span className="text-white font-bold text-2xl" style={{ fontFamily: 'var(--font-display)' }}>
                 {client.name[0]?.toUpperCase() ?? '?'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-headline text-3xl font-black text-on-surface tracking-tight mb-1">{client.name}</h1>
+              <h1
+                className="text-4xl font-black tracking-tight mb-1"
+                style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+              >
+                {client.name}
+              </h1>
               {client.company_name && (
-                <p className="text-on-surface-variant text-sm mb-3">{client.company_name}</p>
+                <p className="text-sm mb-3" style={{ color: 'var(--color-slate)' }}>{client.company_name}</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 {client.email && (
-                  <div className="flex items-center gap-2 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-base text-primary-container">email</span>
-                    <a href={`mailto:${client.email}`} className="hover:text-primary transition-colors">{client.email}</a>
+                  <div className="flex items-center gap-2" style={{ color: 'var(--color-slate)' }}>
+                    <Mail size={15} aria-hidden="true" style={{ color: 'var(--color-primary)' }} />
+                    <a href={`mailto:${client.email}`} className="transition-colors">{client.email}</a>
                   </div>
                 )}
                 {client.phone && (
-                  <div className="flex items-center gap-2 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-base text-primary-container">phone</span>
-                    <a href={`tel:${client.phone}`} className="hover:text-primary transition-colors">{client.phone}</a>
+                  <div className="flex items-center gap-2" style={{ color: 'var(--color-slate)' }}>
+                    <Phone size={15} aria-hidden="true" style={{ color: 'var(--color-primary)' }} />
+                    <a href={`tel:${client.phone}`} className="transition-colors">{client.phone}</a>
                   </div>
                 )}
                 {fullAddress && (
-                  <div className="flex items-center gap-2 text-on-surface-variant sm:col-span-2">
-                    <span className="material-symbols-outlined text-base text-primary-container">location_on</span>
+                  <div className="flex items-center gap-2 sm:col-span-2" style={{ color: 'var(--color-slate)' }}>
+                    <MapPin size={15} aria-hidden="true" style={{ color: 'var(--color-primary)' }} />
                     <span>{fullAddress}</span>
                   </div>
                 )}
               </div>
               {client.notes && (
-                <div className="mt-4 p-3 bg-surface-container-low rounded-lg text-sm text-on-surface-variant">
+                <div className="mt-4 p-3 rounded-lg text-sm" style={{ background: 'var(--color-surface)', color: 'var(--color-slate)' }}>
                   {client.notes}
                 </div>
               )}
@@ -112,11 +132,23 @@ export default function ClientDetailPage() {
         </div>
 
         {/* Job history */}
-        <h2 className="font-headline font-bold text-lg text-on-surface mb-4">Job History</h2>
+        <h2
+          className="font-bold text-lg mb-4"
+          style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+        >
+          Job History
+        </h2>
         {jobs.length === 0 ? (
-          <div className="text-center py-16 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10">
-            <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-3 block">home_work</span>
-            <p className="text-on-surface-variant text-sm">No jobs linked to this client yet.</p>
+          <div
+            className="text-center py-16 rounded-2xl"
+            style={{
+              background: 'var(--color-card)',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <Home className="mx-auto mb-3" size={40} aria-hidden="true" style={{ color: 'rgba(90,96,112,0.3)' }} />
+            <p className="text-sm" style={{ color: 'var(--color-slate)' }}>No jobs linked to this client yet.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -125,28 +157,33 @@ export default function ClientDetailPage() {
                 key={job.id}
                 type="button"
                 onClick={() => navigate(`/jobs/${job.id}`)}
-                className="w-full text-left bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 px-4 py-4 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center gap-2 min-h-[44px]"
+                className="w-full text-left rounded-xl px-4 py-4 transition-all flex flex-col sm:flex-row sm:items-center gap-2 min-h-[44px]"
+                style={{
+                  background: 'var(--color-card)',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-card)',
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-headline font-bold text-on-surface">{job.name}</span>
+                    <span className="font-bold" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>{job.name}</span>
                     <JobStatusBadge status={job.status} size="sm" />
                   </div>
-                  <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
+                  <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--color-slate)' }}>
                     {job.address && (
                       <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">location_on</span>
+                        <MapPin size={13} aria-hidden="true" />
                         {job.address}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">calendar_today</span>
+                      <CalendarDays size={13} aria-hidden="true" />
                       {new Date(job.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                     <span>{job.quote_count ?? 0} estimate{(job.quote_count ?? 0) !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-on-surface-variant text-lg shrink-0">chevron_right</span>
+                <ChevronRight className="shrink-0" size={18} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
               </button>
             ))}
           </div>

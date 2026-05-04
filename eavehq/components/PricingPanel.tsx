@@ -27,7 +27,7 @@ interface PricingPanelProps {
 const DARK = 'rgba(15,25,40,0.92)';
 const DARK_BORDER = 'rgba(255,255,255,0.12)';
 const MUTED = 'rgba(255,255,255,0.45)';
-const TEXT = '#fff';
+const TEXT = '#f7f3ea';
 
 const PricingPanel: React.FC<PricingPanelProps> = ({ dockRef }) => {
   const {
@@ -135,7 +135,6 @@ const PricingPanel: React.FC<PricingPanelProps> = ({ dockRef }) => {
           className="flex items-stretch gap-0 rounded-xl"
           style={{
             background: DARK,
-            backdropFilter: 'blur(14px)',
             border: `1px solid ${DARK_BORDER}`,
             boxShadow: '0 20px 40px rgba(0,0,0,0.45)',
           }}

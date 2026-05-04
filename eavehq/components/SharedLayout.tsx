@@ -35,7 +35,7 @@ export default function SharedLayout({ children }: Props) {
       {/* ── Header ── fixed, full-width ── */}
       <header
         className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 sm:px-6"
-        style={{ background: '#fff', borderBottom: '1px solid var(--color-border)' }}
+        style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}
       >
         <div className="flex items-center gap-2.5">
           <div
@@ -194,7 +194,7 @@ export default function SharedLayout({ children }: Props) {
       {/* ── Mobile bottom nav ── */}
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around px-2"
-        style={{ background: '#fff', borderTop: '1px solid var(--color-border)' }}
+        style={{ background: 'var(--color-card)', borderTop: '1px solid var(--color-border)' }}
       >
         {NAV_ITEMS.map(({ label, Icon, path }) => {
           const locked = path === '/estimator' && estimatorLocked;

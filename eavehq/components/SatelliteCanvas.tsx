@@ -170,7 +170,7 @@ const SatelliteCanvas: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden group">
+    <div className="relative w-full h-full overflow-hidden group" style={{ background: 'rgba(15,25,40,0.98)' }}>
       
       {/* 
          The Transform Wrapper 
@@ -241,9 +241,9 @@ const SatelliteCanvas: React.FC = () => {
               onDragEnd={(e) => handleNodeDragEnd(e, node.id)}
               icon={{
                 path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
-                fillColor: activeDrawNodeId === node.id ? '#3b82f6' : '#ffffff',
+                fillColor: activeDrawNodeId === node.id ? '#3a6349' : '#f7f3ea',
                 fillOpacity: 1,
-                strokeColor: '#000000',
+                strokeColor: '#1f3d2c',
                 strokeWeight: 1,
                 scale: selectedTool === 'draw' ? 3 : 2, // Make nodes slightly bigger in draw mode
               }}
@@ -261,13 +261,27 @@ const SatelliteCanvas: React.FC = () => {
         }`}
       >
         {selectedTool === 'select' && (
-          <div className="bg-black/70 backdrop-blur-md text-amber-400 text-lg font-bold px-6 py-3 rounded-2xl border border-amber-500/50 shadow-2xl flex items-center gap-3">
+          <div
+            className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+            style={{
+              background: 'rgba(15,25,40,0.92)',
+              border: '1px solid rgba(217,111,10,0.35)',
+              color: 'var(--color-accent)',
+            }}
+          >
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
              <span>Double-click lines to select</span>
           </div>
         )}
         {selectedTool === 'draw' && (
-           <div className="bg-black/70 backdrop-blur-md text-blue-400 text-lg font-bold px-6 py-3 rounded-2xl border border-blue-500/50 shadow-2xl flex items-center gap-3">
+           <div
+             className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+             style={{
+               background: 'rgba(15,25,40,0.92)',
+               border: '1px solid rgba(58,99,73,0.42)',
+               color: '#d9e8de',
+             }}
+           >
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
              <span>Click map to add points</span>
           </div>

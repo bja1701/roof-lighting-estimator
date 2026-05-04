@@ -200,7 +200,7 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
                       className="flex-1 py-2 text-sm font-medium rounded-md transition-all"
                       style={
                         mode === m
-                          ? { background: '#fff', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                          ? { background: 'var(--color-card)', color: 'var(--color-primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
                           : { color: 'var(--color-slate)' }
                       }
                     >

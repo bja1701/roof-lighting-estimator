@@ -20,6 +20,7 @@ import ClientPortalPage from './pages/ClientPortalPage';
 import ClientPortalSuccessPage from './pages/ClientPortalSuccessPage';
 import ClientPortalFinalSuccessPage from './pages/ClientPortalFinalSuccessPage';
 import InvoicePage from './pages/InvoicePage';
+import FoundersPage from './pages/FoundersPage';
 
 function AppRoutes() {
   const { session, loading: authLoading, init } = useAuth();
@@ -46,13 +47,14 @@ function AppRoutes() {
 
   // Public portal routes — no auth required, token is the access control
   const pathname = window.location.pathname;
-  if (pathname.startsWith('/quote/') || pathname.startsWith('/invoice/')) {
+  if (pathname.startsWith('/quote/') || pathname.startsWith('/invoice/') || pathname === '/founders') {
     return (
       <Routes>
         <Route path="/quote/:token" element={<ClientPortalPage />} />
         <Route path="/quote/:token/success" element={<ClientPortalSuccessPage />} />
         <Route path="/quote/:token/final-success" element={<ClientPortalFinalSuccessPage />} />
         <Route path="/invoice/:token" element={<InvoicePage />} />
+        <Route path="/founders" element={<FoundersPage />} />
       </Routes>
     );
   }

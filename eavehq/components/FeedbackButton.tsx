@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageCircle, X, CheckCircle, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
 export default function FeedbackButton() {
+  const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
@@ -31,12 +33,17 @@ export default function FeedbackButton() {
     }, 2500);
   };
 
+  const isEstimator = location.pathname.startsWith('/estimator');
+
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 sm:bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all active:scale-95"
+        className={`fixed right-5 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all active:scale-95 ${
+          isEstimator ? '' : 'bottom-20 sm:bottom-5'
+        }`}
         style={{
+          bottom: isEstimator ? '14.5rem' : undefined,
           background: 'var(--color-primary-dark)',
           color: 'rgba(255,255,255,0.85)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
@@ -51,8 +58,9 @@ export default function FeedbackButton() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none">
           <div
-            className="pointer-events-auto w-80 mb-20 mr-5 rounded-xl p-6"
+            className={`pointer-events-auto w-80 mr-5 rounded-xl p-6 ${isEstimator ? '' : 'mb-20'}`}
             style={{
+              marginBottom: isEstimator ? '18rem' : undefined,
               background: 'var(--color-card)',
               border: '1px solid var(--color-border)',
               boxShadow: 'var(--shadow-modal)',
