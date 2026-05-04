@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastProvider } from './hooks/useToast';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import AuthPage from './pages/AuthPage';
 import JobsPage from './pages/JobsPage';
 import JobDetailPage from './pages/JobDetailPage';
+import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import ClientDetailPage from './pages/ClientDetailPage';
 import EstimatorRouteGuard from './components/EstimatorRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
@@ -16,6 +20,7 @@ import ClientPortalPage from './pages/ClientPortalPage';
 import ClientPortalSuccessPage from './pages/ClientPortalSuccessPage';
 import ClientPortalFinalSuccessPage from './pages/ClientPortalFinalSuccessPage';
 import InvoicePage from './pages/InvoicePage';
+import FoundersPage from './pages/FoundersPage';
 
 function AppRoutes() {
   const { session, loading: authLoading, init } = useAuth();
@@ -42,21 +47,22 @@ function AppRoutes() {
 
   // Public portal routes — no auth required, token is the access control
   const pathname = window.location.pathname;
-  if (pathname.startsWith('/quote/') || pathname.startsWith('/invoice/')) {
+  if (pathname.startsWith('/quote/') || pathname.startsWith('/invoice/') || pathname === '/founders') {
     return (
       <Routes>
         <Route path="/quote/:token" element={<ClientPortalPage />} />
         <Route path="/quote/:token/success" element={<ClientPortalSuccessPage />} />
         <Route path="/quote/:token/final-success" element={<ClientPortalFinalSuccessPage />} />
         <Route path="/invoice/:token" element={<InvoicePage />} />
+        <Route path="/founders" element={<FoundersPage />} />
       </Routes>
     );
   }
 
   if (!authDone || authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-primary-dark)' }}>
+        <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '2px solid rgba(255,255,255,0.15)', borderTopColor: 'var(--color-accent)' }} />
       </div>
     );
   }
@@ -77,8 +83,11 @@ function AppRoutes() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<JobsPage />} />
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/jobs" element={<JobsPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/estimator" element={<EstimatorRouteGuard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
@@ -95,8 +104,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </ToastProvider>
   );
 }

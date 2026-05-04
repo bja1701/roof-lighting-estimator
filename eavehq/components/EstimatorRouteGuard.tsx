@@ -17,8 +17,11 @@ export default function EstimatorRouteGuard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--color-surface)' }}>
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+          style={{ borderColor: 'rgba(58,99,73,0.22)', borderTopColor: 'transparent' }}
+        />
       </div>
     );
   }

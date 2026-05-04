@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BriefcaseBusiness, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ensureProfileRowExists } from '../utils/ensureProfile';
@@ -8,8 +9,26 @@ interface Props {
   onClose: () => void;
 }
 
-const inputCls = 'w-full px-4 py-3 bg-surface-container-low border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-container text-on-surface text-sm placeholder:text-outline/50 transition-all';
-const labelCls = 'block text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-1.5';
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  color: 'var(--color-ink)',
+  fontSize: '0.875rem',
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.1em',
+  color: 'var(--color-slate)',
+  marginBottom: '6px',
+};
 
 export default function NewJobModal({ onCreated, onClose }: Props) {
   const { user } = useAuth();
@@ -28,10 +47,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
     const ensured = await ensureProfileRowExists(user);
     if (!ensured.ok) {
       setSubmitting(false);
-      setError(
-        ensured.error ??
-          'Your account profile is still syncing. Refresh the page and try again, or contact support.'
-      );
+      setError(ensured.error ?? 'Your account profile is still syncing. Refresh and try again.');
       return;
     }
     const { data, error: err } = await supabase
@@ -52,62 +68,113 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-inverse-surface/70 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
-      <div className="bg-surface-container-lowest rounded-xl shadow-[0px_20px_40px_rgba(17,28,45,0.15)] border border-outline-variant/10 w-full max-w-md overflow-hidden">
-        {/* Top amber bar */}
-        <div className="h-1 w-full amber-gradient"></div>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: 'rgba(31,61,44,0.75)' }}
+    >
+      <div
+        className="w-full max-w-md rounded-xl overflow-hidden"
+        style={{
+          background: 'var(--color-card)',
+          border: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-modal)',
+        }}
+      >
+
         <div className="p-7">
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-primary-container/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary-container text-lg">add_home_work</span>
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(58,99,73,0.1)', color: 'var(--color-primary)' }}
+              >
+                <BriefcaseBusiness size={18} />
               </div>
-              <h2 className="font-headline font-bold text-xl text-on-surface">New Job</h2>
+              <h2 className="font-bold text-xl" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+                New Job
+              </h2>
             </div>
-            <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-lg hover:bg-surface-container-low">
-              <span className="material-symbols-outlined text-base">close</span>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: 'var(--color-slate)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-ink)'; e.currentTarget.style.background = 'var(--color-surface)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-slate)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <X size={16} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className={labelCls}>Job Name *</label>
-              <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Smith Residence" className={inputCls} />
+              <label style={labelStyle}>Job Name *</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Smith Residence"
+                style={inputStyle}
+              />
             </div>
 
-            <div className="border-t border-outline-variant/20 pt-4">
-              <p className="text-[11px] font-label font-bold uppercase tracking-wider text-on-surface-variant mb-3">Client Info (Optional)</p>
+            <div className="pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+              <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--color-slate)' }}>
+                Client Info (Optional)
+              </p>
               <div className="space-y-4">
                 <div>
-                  <label className={labelCls}>Client Name</label>
-                  <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="John Smith" className={inputCls} />
+                  <label style={labelStyle}>Client Name</label>
+                  <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="John Smith" style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Client Email</label>
-                  <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="john@example.com" className={inputCls} />
+                  <label style={labelStyle}>Client Email</label>
+                  <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="john@example.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Client Phone</label>
-                  <input type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="(208) 555-0123" className={inputCls} />
+                  <label style={labelStyle}>Client Phone</label>
+                  <input type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="(208) 555-0123" style={inputStyle} />
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-on-surface-variant">
+            <p className="text-xs" style={{ color: 'var(--color-slate)' }}>
               Site address is set automatically when you save an estimate from the map.
             </p>
 
             {error && (
-              <div className="bg-error-container/30 border-l-4 border-error p-3 rounded-r-lg">
-                <p className="text-sm text-error font-medium">{error}</p>
+              <div
+                className="px-4 py-3 rounded-lg"
+                style={{ background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.2)' }}
+              >
+                <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{error}</p>
               </div>
             )}
 
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={onClose} className="flex-1 py-3 bg-surface-container-low text-on-surface-variant font-medium text-sm rounded-lg hover:bg-surface-container transition-colors">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-3 text-sm font-medium rounded-lg transition-colors"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-border)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-surface)')}
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={submitting || !name.trim()} className="flex-1 amber-gradient text-white font-headline font-bold py-3 rounded-lg shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                type="submit"
+                disabled={submitting || !name.trim()}
+                className="flex-1 font-bold py-3 rounded-lg transition-all active:scale-95"
+                style={{
+                  background: submitting || !name.trim() ? 'var(--color-border)' : 'var(--color-accent)',
+                  color: submitting || !name.trim() ? 'var(--color-slate)' : '#fff',
+                  cursor: submitting || !name.trim() ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-display)',
+                  boxShadow: submitting || !name.trim() ? 'none' : '0 2px 8px rgba(217,111,10,0.3)',
+                }}
+              >
                 {submitting ? 'Creating…' : 'Create Job'}
               </button>
             </div>

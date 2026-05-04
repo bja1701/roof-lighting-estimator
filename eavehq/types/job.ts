@@ -32,6 +32,9 @@ export interface Job {
   estimate_sent_at: string | null;
   client_opened_at: string | null;
   followup_count: number;
+  // Phase 2 — CRM
+  scheduled_date: string | null;
+  client_id: string | null;
   // Joined from quotes(count) in list queries
   quote_count?: number;
 }
