@@ -1,64 +1,73 @@
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
 const SearchBar: React.FC = () => {
-  const { setMapCenter, setStreetViewPosition, setEstimateSiteAddress, reset } = useEstimatorStore();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+	const { setMapCenter, setStreetViewPosition, setEstimateSiteAddress, reset } =
+		useEstimatorStore();
+	const inputRef = useRef<HTMLInputElement>(null);
+	const autocompleteRef = useRef<any>(null);
 
-  useEffect(() => {
-    const win = window as any;
-    if (!win.google || !win.google.maps || !win.google.maps.places) return;
+	useEffect(() => {
+		const win = window as any;
+		if (!win.google?.maps?.places) return;
 
-    if (inputRef.current) {
-      autocompleteRef.current = new win.google.maps.places.Autocomplete(inputRef.current, {
-        fields: ['geometry', 'formatted_address'],
-        types: ['geocode', 'establishment'],
-      });
+		if (inputRef.current) {
+			autocompleteRef.current = new win.google.maps.places.Autocomplete(
+				inputRef.current,
+				{
+					fields: ['geometry', 'formatted_address'],
+					types: ['geocode', 'establishment'],
+				}
+			);
 
-      const listener = autocompleteRef.current.addListener('place_changed', () => {
-        const place = autocompleteRef.current?.getPlace();
-        if (place && place.geometry && place.geometry.location) {
-          const location = place.geometry.location;
-          const newLatLng = { lat: location.lat(), lng: location.lng() };
-          setMapCenter(newLatLng);
-          setStreetViewPosition(newLatLng);
-          reset();
-          setEstimateSiteAddress(place.formatted_address?.trim() || null);
-        }
-      });
+			const listener = autocompleteRef.current.addListener(
+				'place_changed',
+				() => {
+					const place = autocompleteRef.current?.getPlace();
+					if (place?.geometry?.location) {
+						const location = place.geometry.location;
+						const newLatLng = { lat: location.lat(), lng: location.lng() };
+						setMapCenter(newLatLng);
+						setStreetViewPosition(newLatLng);
+						reset();
+						setEstimateSiteAddress(place.formatted_address?.trim() || null);
+					}
+				}
+			);
 
-      return () => {
-        if (listener) win.google.maps.event.removeListener(listener);
-        if (autocompleteRef.current) win.google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      };
-    }
-  }, [setMapCenter, setStreetViewPosition, setEstimateSiteAddress, reset]);
+			return () => {
+				if (listener) win.google.maps.event.removeListener(listener);
+				if (autocompleteRef.current)
+					win.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+			};
+		}
+	}, [setMapCenter, setStreetViewPosition, setEstimateSiteAddress, reset]);
 
-  return (
-    <div className="w-full max-w-lg relative z-[60]">
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder="Enter address..."
-        className="w-full rounded-lg px-4 py-2 text-sm transition-all focus:outline-none"
-        style={{
-          background: 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.18)',
-          color: '#fff',
-          caretColor: '#fff',
-        }}
-        onFocus={e => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)';
-        }}
-        onBlur={e => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
-        }}
-      />
+	return (
+		<div className="w-full max-w-lg relative z-[60]">
+			<input
+				ref={inputRef}
+				type="text"
+				placeholder="Enter address..."
+				className="w-full rounded-lg px-4 py-2 text-sm transition-all focus:outline-none"
+				style={{
+					background: 'rgba(255,255,255,0.1)',
+					border: '1px solid rgba(255,255,255,0.18)',
+					color: '#fff',
+					caretColor: '#fff',
+				}}
+				onFocus={(e) => {
+					e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+					e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)';
+				}}
+				onBlur={(e) => {
+					e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+					e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
+				}}
+			/>
 
-      <style>{`
+			<style>{`
         .pac-container {
           background-color: #ffffff !important;
           border: 1px solid var(--color-border);
@@ -81,8 +90,8 @@ const SearchBar: React.FC = () => {
         .pac-item-query { color: var(--color-ink); font-size: 14px; }
         .pac-icon { filter: none; }
       `}</style>
-    </div>
-  );
+		</div>
+	);
 };
 
 export default SearchBar;

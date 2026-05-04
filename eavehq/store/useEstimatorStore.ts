@@ -1,241 +1,251 @@
-
-import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { EstimatorState, LineType, LatLng } from '../types/index';
+import { create } from 'zustand';
+import type { EstimatorState, LatLng } from '../types/index';
 import { calculateDistance, getMultiplierFromPitch } from '../utils/geometry';
 
 interface ExtendedEstimatorState extends EstimatorState {
-  // Decoupled Positions
-  satelliteCenter: LatLng;
-  streetViewPosition: LatLng;
-  /** Human-readable site address from Places search (used when saving a quote → job card / Street View). */
-  estimateSiteAddress: string | null;
+	// Decoupled Positions
+	satelliteCenter: LatLng;
+	streetViewPosition: LatLng;
+	/** Human-readable site address from Places search (used when saving a quote → job card / Street View). */
+	estimateSiteAddress: string | null;
 
-  // Actions
-  setMapCenter: (location: LatLng) => void; // Updates Satellite Only (used by Search)
-  setStreetViewPosition: (location: LatLng) => void;
-  setEstimateSiteAddress: (address: string | null) => void;
-  syncStreetViewToSatellite: () => void;
-  loadProfilePricing: (pricePerFt: number, controllerFee: number, includeController: boolean) => void;
-  restoreCanvas: (canvasState: any) => void;
+	// Actions
+	setMapCenter: (location: LatLng) => void; // Updates Satellite Only (used by Search)
+	setStreetViewPosition: (location: LatLng) => void;
+	setEstimateSiteAddress: (address: string | null) => void;
+	syncStreetViewToSatellite: () => void;
+	loadProfilePricing: (
+		pricePerFt: number,
+		controllerFee: number,
+		includeController: boolean
+	) => void;
+	restoreCanvas: (canvasState: any) => void;
 }
 
 export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
-  // Initial State
-  nodes: [],
-  lines: [],
-  
-  // Navigation State
-  // Default: 1568 E 550 S, Springville, UT
-  satelliteCenter: { lat: 40.157588, lng: -111.575344 }, 
-  streetViewPosition: { lat: 40.157588, lng: -111.575344 },
-  estimateSiteAddress: null,
+	// Initial State
+	nodes: [],
+	lines: [],
 
-  // Pricing / Domain
-  pricePerFt: 25.0,
-  controllerFee: 300.0,
-  includeController: true,
-  
-  selectedLineId: null,
+	// Navigation State
+	// Default: 1568 E 550 S, Springville, UT
+	satelliteCenter: { lat: 40.157588, lng: -111.575344 },
+	streetViewPosition: { lat: 40.157588, lng: -111.575344 },
+	estimateSiteAddress: null,
 
-  totalLength2D: 0,
-  totalLength3D: 0,
-  estimatedCost: 0,
-  selectedTool: 'select', // Default to Select Mode
-  visualPitchAngle: 26.6, // Default to ~6/12 visual
-  isSuperZoom: false,
-  activeDrawNodeId: null,
+	// Pricing / Domain
+	pricePerFt: 25.0,
+	controllerFee: 300.0,
+	includeController: true,
 
-  // --- Navigation Actions ---
+	selectedLineId: null,
 
-  setMapCenter: (location) => {
-    set({ satelliteCenter: location });
-  },
+	totalLength2D: 0,
+	totalLength3D: 0,
+	estimatedCost: 0,
+	selectedTool: 'select', // Default to Select Mode
+	visualPitchAngle: 26.6, // Default to ~6/12 visual
+	isSuperZoom: false,
+	activeDrawNodeId: null,
 
-  setStreetViewPosition: (location) => {
-    set({ streetViewPosition: location });
-  },
+	// --- Navigation Actions ---
 
-  setEstimateSiteAddress: (address) => set({ estimateSiteAddress: address }),
+	setMapCenter: (location) => {
+		set({ satelliteCenter: location });
+	},
 
-  syncStreetViewToSatellite: () => {
-    const { satelliteCenter } = get();
-    set({ streetViewPosition: { ...satelliteCenter } });
-  },
+	setStreetViewPosition: (location) => {
+		set({ streetViewPosition: location });
+	},
 
-  // --- Domain Actions ---
+	setEstimateSiteAddress: (address) => set({ estimateSiteAddress: address }),
 
-  addNode: (lat, lng) => {
-    const id = uuidv4();
-    set((state) => ({
-      nodes: [...state.nodes, { id, lat, lng }],
-    }));
-    get().calculateTotals();
-    return id;
-  },
+	syncStreetViewToSatellite: () => {
+		const { satelliteCenter } = get();
+		set({ streetViewPosition: { ...satelliteCenter } });
+	},
 
-  updateNodePosition: (id, lat, lng) => {
-    set((state) => ({
-      nodes: state.nodes.map((n) => n.id === id ? { ...n, lat, lng } : n),
-    }));
-    get().calculateTotals();
-  },
+	// --- Domain Actions ---
 
-  removeNode: (id) => {
-    set((state) => ({
-      nodes: state.nodes.filter((n) => n.id !== id),
-      lines: state.lines.filter((l) => l.startNodeId !== id && l.endNodeId !== id),
-      selectedLineId: state.selectedLineId ? null : state.selectedLineId, // Deselect if needed
-      activeDrawNodeId: state.activeDrawNodeId === id ? null : state.activeDrawNodeId
-    }));
-    get().calculateTotals();
-  },
+	addNode: (lat, lng) => {
+		const id = uuidv4();
+		set((state) => ({
+			nodes: [...state.nodes, { id, lat, lng }],
+		}));
+		get().calculateTotals();
+		return id;
+	},
 
-  addLine: (startNodeId, endNodeId, type = 'eave') => {
-    const existing = get().lines.find(
-      (l) =>
-        (l.startNodeId === startNodeId && l.endNodeId === endNodeId) ||
-        (l.startNodeId === endNodeId && l.endNodeId === startNodeId)
-    );
+	updateNodePosition: (id, lat, lng) => {
+		set((state) => ({
+			nodes: state.nodes.map((n) => (n.id === id ? { ...n, lat, lng } : n)),
+		}));
+		get().calculateTotals();
+	},
 
-    if (existing) return;
+	removeNode: (id) => {
+		set((state) => ({
+			nodes: state.nodes.filter((n) => n.id !== id),
+			lines: state.lines.filter(
+				(l) => l.startNodeId !== id && l.endNodeId !== id
+			),
+			selectedLineId: state.selectedLineId ? null : state.selectedLineId, // Deselect if needed
+			activeDrawNodeId:
+				state.activeDrawNodeId === id ? null : state.activeDrawNodeId,
+		}));
+		get().calculateTotals();
+	},
 
-    // Default Pitch Logic:
-    // Eaves are typically flat (0/12) for calculation purposes (multiplier 1).
-    // Rakes/Ridges usually follow the roof slope (default 6/12).
-    const defaultPitch = type === 'eave' ? "0/12" : "6/12";
+	addLine: (startNodeId, endNodeId, type = 'eave') => {
+		const existing = get().lines.find(
+			(l) =>
+				(l.startNodeId === startNodeId && l.endNodeId === endNodeId) ||
+				(l.startNodeId === endNodeId && l.endNodeId === startNodeId)
+		);
 
-    const id = uuidv4();
-    set((state) => ({
-      lines: [...state.lines, { id, startNodeId, endNodeId, type, pitch: defaultPitch }],
-      selectedLineId: id, // Auto-select new line
-    }));
-    get().calculateTotals();
-  },
+		if (existing) return;
 
-  removeLine: (id) => {
-    set((state) => ({
-      lines: state.lines.filter((l) => l.id !== id),
-      selectedLineId: state.selectedLineId === id ? null : state.selectedLineId,
-    }));
-    get().calculateTotals();
-  },
+		// Default Pitch Logic:
+		// Eaves are typically flat (0/12) for calculation purposes (multiplier 1).
+		// Rakes/Ridges usually follow the roof slope (default 6/12).
+		const defaultPitch = type === 'eave' ? '0/12' : '6/12';
 
-  selectLine: (id) => {
-    set({ selectedLineId: id });
-  },
+		const id = uuidv4();
+		set((state) => ({
+			lines: [
+				...state.lines,
+				{ id, startNodeId, endNodeId, type, pitch: defaultPitch },
+			],
+			selectedLineId: id, // Auto-select new line
+		}));
+		get().calculateTotals();
+	},
 
-  setActiveDrawNode: (id) => {
-    set({ activeDrawNodeId: id });
-  },
+	removeLine: (id) => {
+		set((state) => ({
+			lines: state.lines.filter((l) => l.id !== id),
+			selectedLineId: state.selectedLineId === id ? null : state.selectedLineId,
+		}));
+		get().calculateTotals();
+	},
 
-  updateLinePitch: (id, pitch) => {
-    console.log(`[Store] updateLinePitch triggered for Line ${id} -> ${pitch}`);
-    set((state) => ({
-      lines: state.lines.map((line) =>
-        line.id === id ? { ...line, pitch: pitch } : line
-      )
-    }));
-    // Force recalculation immediately after state update
-    get().calculateTotals();
-  },
+	selectLine: (id) => {
+		set({ selectedLineId: id });
+	},
 
-  setSelectedTool: (tool) => set({ selectedTool: tool }),
+	setActiveDrawNode: (id) => {
+		set({ activeDrawNodeId: id });
+	},
 
-  setVisualPitchAngle: (angle: number) => {
-    set({ visualPitchAngle: angle });
-  },
-  
-  toggleSuperZoom: () => set((state) => ({ isSuperZoom: !state.isSuperZoom })),
+	updateLinePitch: (id, pitch) => {
+		set((state) => ({
+			lines: state.lines.map((line) =>
+				line.id === id ? { ...line, pitch: pitch } : line
+			),
+		}));
+		// Force recalculation immediately after state update
+		get().calculateTotals();
+	},
 
-  setPitch: (pitch: string) => {
-    // Legacy support
-  },
+	setSelectedTool: (tool) => set({ selectedTool: tool }),
 
-  loadProfilePricing: (pricePerFt, controllerFee, includeController) => {
-    set({ pricePerFt, controllerFee, includeController });
-    get().calculateTotals();
-  },
+	setVisualPitchAngle: (angle: number) => {
+		set({ visualPitchAngle: angle });
+	},
 
-  restoreCanvas: (canvasState) => {
-    if (!canvasState) return;
-    set({
-      nodes: canvasState.nodes ?? [],
-      lines: canvasState.lines ?? [],
-      pricePerFt: canvasState.pricePerFt ?? get().pricePerFt,
-      controllerFee: canvasState.controllerFee ?? get().controllerFee,
-      includeController: canvasState.includeController ?? get().includeController,
-      satelliteCenter: canvasState.satelliteCenter ?? get().satelliteCenter,
-      estimateSiteAddress:
-        canvasState.estimateSiteAddress !== undefined
-          ? canvasState.estimateSiteAddress
-          : get().estimateSiteAddress,
-      selectedLineId: null,
-      activeDrawNodeId: null,
-    });
-    get().calculateTotals();
-  },
+	toggleSuperZoom: () => set((state) => ({ isSuperZoom: !state.isSuperZoom })),
 
-  setPricePerFt: (price) => {
-    set({ pricePerFt: price });
-    get().calculateTotals();
-  },
+	setPitch: (pitch: string) => {
+		// Legacy support
+	},
 
-  toggleController: () => {
-    set((state) => ({ includeController: !state.includeController }));
-    get().calculateTotals();
-  },
+	loadProfilePricing: (pricePerFt, controllerFee, includeController) => {
+		set({ pricePerFt, controllerFee, includeController });
+		get().calculateTotals();
+	},
 
-  reset: () => {
-    set({
-      nodes: [],
-      lines: [],
-      selectedLineId: null,
-      totalLength2D: 0,
-      totalLength3D: 0,
-      estimatedCost: 0,
-      activeDrawNodeId: null
-    });
-  },
+	restoreCanvas: (canvasState) => {
+		if (!canvasState) return;
+		set({
+			nodes: canvasState.nodes ?? [],
+			lines: canvasState.lines ?? [],
+			pricePerFt: canvasState.pricePerFt ?? get().pricePerFt,
+			controllerFee: canvasState.controllerFee ?? get().controllerFee,
+			includeController:
+				canvasState.includeController ?? get().includeController,
+			satelliteCenter: canvasState.satelliteCenter ?? get().satelliteCenter,
+			estimateSiteAddress:
+				canvasState.estimateSiteAddress !== undefined
+					? canvasState.estimateSiteAddress
+					: get().estimateSiteAddress,
+			selectedLineId: null,
+			activeDrawNodeId: null,
+		});
+		get().calculateTotals();
+	},
 
-  calculateTotals: () => {
-    const { nodes, lines, pricePerFt, includeController, controllerFee } = get();
+	setPricePerFt: (price) => {
+		set({ pricePerFt: price });
+		get().calculateTotals();
+	},
 
-    let total2D = 0;
-    let total3D = 0;
+	toggleController: () => {
+		set((state) => ({ includeController: !state.includeController }));
+		get().calculateTotals();
+	},
 
-    lines.forEach((line) => {
-      const startNode = nodes.find((n) => n.id === line.startNodeId);
-      const endNode = nodes.find((n) => n.id === line.endNodeId);
+	reset: () => {
+		set({
+			nodes: [],
+			lines: [],
+			selectedLineId: null,
+			totalLength2D: 0,
+			totalLength3D: 0,
+			estimatedCost: 0,
+			activeDrawNodeId: null,
+		});
+	},
 
-      if (startNode && endNode) {
-        const dist = calculateDistance(startNode, endNode);
-        total2D += dist;
+	calculateTotals: () => {
+		const { nodes, lines, pricePerFt, includeController, controllerFee } =
+			get();
 
-        // Pitch Multiplier Logic
-        let multiplier = 1.0;
-        
-        if (line.type === 'eave') {
-          // Eaves run along the horizontal plane, so multiplier is 1.0
-          multiplier = 1.0;
-        } else {
-          // Rakes, Valleys, Hips, Ridges affected by pitch
-          multiplier = getMultiplierFromPitch(line.pitch || "6/12");
-        }
-        
-        total3D += dist * multiplier;
-      }
-    });
+		let total2D = 0;
+		let total3D = 0;
 
-    let cost = total3D * pricePerFt;
-    if (includeController) {
-      cost += controllerFee;
-    }
+		lines.forEach((line) => {
+			const startNode = nodes.find((n) => n.id === line.startNodeId);
+			const endNode = nodes.find((n) => n.id === line.endNodeId);
 
-    set({
-      totalLength2D: parseFloat(total2D.toFixed(2)),
-      totalLength3D: parseFloat(total3D.toFixed(2)),
-      estimatedCost: parseFloat(cost.toFixed(2)),
-    });
-  },
+			if (startNode && endNode) {
+				const dist = calculateDistance(startNode, endNode);
+				total2D += dist;
+
+				// Pitch Multiplier Logic
+				let multiplier = 1.0;
+
+				if (line.type === 'eave') {
+					// Eaves run along the horizontal plane, so multiplier is 1.0
+					multiplier = 1.0;
+				} else {
+					// Rakes, Valleys, Hips, Ridges affected by pitch
+					multiplier = getMultiplierFromPitch(line.pitch || '6/12');
+				}
+
+				total3D += dist * multiplier;
+			}
+		});
+
+		let cost = total3D * pricePerFt;
+		if (includeController) {
+			cost += controllerFee;
+		}
+
+		set({
+			totalLength2D: parseFloat(total2D.toFixed(2)),
+			totalLength3D: parseFloat(total3D.toFixed(2)),
+			estimatedCost: parseFloat(cost.toFixed(2)),
+		});
+	},
 }));
