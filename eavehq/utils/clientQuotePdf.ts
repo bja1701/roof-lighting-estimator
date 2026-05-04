@@ -6,56 +6,63 @@
 import type { Profile } from '../hooks/useProfile';
 
 export type PdfQuote = {
-  id: string;
-  label: string;
-  notes: string | null;
-  total_linear_ft: number | null;
-  total_price: number | null;
-  price_per_foot: number | null;
-  controller_fee: number | null;
-  include_controller: boolean | null;
-  created_at: string;
+	id: string;
+	label: string;
+	notes: string | null;
+	total_linear_ft: number | null;
+	total_price: number | null;
+	price_per_foot: number | null;
+	controller_fee: number | null;
+	include_controller: boolean | null;
+	created_at: string;
 };
 
 export type PdfJob = {
-  name: string;
-  address: string | null;
+	name: string;
+	address: string | null;
 };
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+	return s
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;');
 }
 
 function fmtMoney(n: number): string {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+	return n.toLocaleString('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
 }
 
 function quoteRef(jobName: string, quoteId: string): string {
-  const short = quoteId.replace(/-/g, '').slice(0, 8).toUpperCase();
-  const slug = jobName
-    .slice(0, 12)
-    .replace(/[^a-zA-Z0-9]+/g, '')
-    .toUpperCase();
-  return `${slug || 'JOB'}-${short}`;
+	const short = quoteId.replace(/-/g, '').slice(0, 8).toUpperCase();
+	const slug = jobName
+		.slice(0, 12)
+		.replace(/[^a-zA-Z0-9]+/g, '')
+		.toUpperCase();
+	return `${slug || 'JOB'}-${short}`;
 }
 
-function sectionForQuote(quote: PdfQuote, optionIndex: number, accent: string): string {
-  const label = escapeHtml(quote.label);
-  const footage = quote.total_linear_ft ?? 0;
-  const total = quote.total_price ?? 0;
-  const ppf = quote.price_per_foot ?? 4;
-  const ctrlFee = quote.controller_fee ?? 0;
-  const hasController = !!(quote.include_controller && ctrlFee > 0);
-  const lightingSubtotal = hasController ? Math.max(0, total - ctrlFee) : total;
-  const notesBlock = quote.notes?.trim()
-    ? `<div class="opt-notes"><strong>Notes</strong><p>${escapeHtml(quote.notes.trim())}</p></div>`
-    : '';
+function sectionForQuote(
+	quote: PdfQuote,
+	optionIndex: number,
+	accent: string
+): string {
+	const label = escapeHtml(quote.label);
+	const footage = quote.total_linear_ft ?? 0;
+	const total = quote.total_price ?? 0;
+	const ppf = quote.price_per_foot ?? 4;
+	const ctrlFee = quote.controller_fee ?? 0;
+	const hasController = !!(quote.include_controller && ctrlFee > 0);
+	const lightingSubtotal = hasController ? Math.max(0, total - ctrlFee) : total;
+	const notesBlock = quote.notes?.trim()
+		? `<div class="opt-notes"><strong>Notes</strong><p>${escapeHtml(quote.notes.trim())}</p></div>`
+		: '';
 
-  return `
+	return `
   <section class="opt-block">
     <div class="opt-head">
       <span class="opt-badge">Option ${optionIndex}</span>
@@ -67,10 +74,10 @@ function sectionForQuote(quote: PdfQuote, optionIndex: number, accent: string): 
         <tr><td class="d">Roof perimeter (3D)</td><td class="a">${footage.toFixed(1)} lin. ft</td></tr>
         <tr><td class="d">Lighting <span class="muted">@ $${fmtMoney(ppf)}/ft</span></td><td class="a">$${fmtMoney(lightingSubtotal)}</td></tr>
         ${
-          hasController
-            ? `<tr><td class="d">Controller package</td><td class="a">$${fmtMoney(ctrlFee)}</td></tr>`
-            : ''
-        }
+					hasController
+						? `<tr><td class="d">Controller package</td><td class="a">$${fmtMoney(ctrlFee)}</td></tr>`
+						: ''
+				}
       </tbody>
     </table>
     <div class="opt-total">
@@ -82,18 +89,18 @@ function sectionForQuote(quote: PdfQuote, optionIndex: number, accent: string): 
 }
 
 function comparisonTable(quotes: PdfQuote[], accent: string): string {
-  if (quotes.length < 2) return '';
-  const rows = quotes
-    .map(
-      (q, i) => `
+	if (quotes.length < 2) return '';
+	const rows = quotes
+		.map(
+			(q, i) => `
     <tr>
       <td class="c-name"><span class="c-dot" style="background:${accent}"></span> Option ${i + 1}: ${escapeHtml(q.label)}</td>
       <td class="c-num">${(q.total_linear_ft ?? 0).toFixed(1)} ft</td>
       <td class="c-num c-strong">$${fmtMoney(q.total_price ?? 0)}</td>
     </tr>`
-    )
-    .join('');
-  return `
+		)
+		.join('');
+	return `
   <div class="compare-wrap">
     <h3 class="compare-h">Compare options</h3>
     <table class="compare">
@@ -103,27 +110,33 @@ function comparisonTable(quotes: PdfQuote[], accent: string): string {
   </div>`;
 }
 
-export function buildClientQuotePdfHtml(job: PdfJob, profile: Profile | null, quotes: PdfQuote[]): string {
-  const accent = profile?.brand_color ?? '#d97706';
-  const company = escapeHtml(profile?.company_name ?? 'EaveHQ');
-  const rep = escapeHtml(profile?.full_name ?? '');
-  const phone = escapeHtml(profile?.phone ?? '');
-  const email = escapeHtml(profile?.email ?? '');
-  const logoUrl = profile?.logo_url ?? '';
-  const jobName = escapeHtml(job.name);
-  const jobAddr = job.address ? escapeHtml(job.address) : '';
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const ref = quoteRef(job.name, quotes[0]?.id ?? 'x');
+export function buildClientQuotePdfHtml(
+	job: PdfJob,
+	profile: Profile | null,
+	quotes: PdfQuote[]
+): string {
+	const accent = profile?.brand_color ?? '#d97706';
+	const company = escapeHtml(profile?.company_name ?? 'EaveHQ');
+	const rep = escapeHtml(profile?.full_name ?? '');
+	const phone = escapeHtml(profile?.phone ?? '');
+	const email = escapeHtml(profile?.email ?? '');
+	const logoUrl = profile?.logo_url ?? '';
+	const jobName = escapeHtml(job.name);
+	const jobAddr = job.address ? escapeHtml(job.address) : '';
+	const dateStr = new Date().toLocaleDateString('en-US', {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	});
+	const ref = quoteRef(job.name, quotes[0]?.id ?? 'x');
 
-  const sections = quotes.map((q, i) => sectionForQuote(q, i + 1, accent)).join('');
-  const compare = comparisonTable(quotes, accent);
+	const sections = quotes
+		.map((q, i) => sectionForQuote(q, i + 1, accent))
+		.join('');
+	const compare = comparisonTable(quotes, accent);
 
-  const css = `
+	const css = `
 :root { --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --paper:#ffffff; --soft:#f9fafb; }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans-serif;color:var(--ink);background:#fff;font-size:14px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -182,17 +195,17 @@ body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans
 }
 `;
 
-  const title = quotes.length > 1 ? 'Estimate options' : 'Estimate';
+	const title = quotes.length > 1 ? 'Estimate options' : 'Estimate';
 
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${jobName} — ${escapeHtml(
-    title
-  )}</title><style>${css}</style></head><body><div class="doc">
+	return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${jobName} — ${escapeHtml(
+		title
+	)}</title><style>${css}</style></head><body><div class="doc">
   <header class="doc-header">
     <div class="doc-logo">${
-      logoUrl
-        ? `<img src="${escapeHtml(logoUrl)}" alt=""/>`
-        : `<div class="doc-logo-fallback" style="background:${accent}" aria-hidden="true"></div>`
-    }</div>
+			logoUrl
+				? `<img src="${escapeHtml(logoUrl)}" alt=""/>`
+				: `<div class="doc-logo-fallback" style="background:${accent}" aria-hidden="true"></div>`
+		}</div>
     <div class="doc-co">
       <div class="co-name">${company}</div>
       ${rep ? `<div class="co-line">${rep}</div>` : ''}
@@ -230,14 +243,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans
     <p>Pricing is an estimate based on satellite measurements and your selected options. <strong>Final price</strong> may change after a site visit.</p>
     <p style="margin-top:10px">Thank you for your business.</p>
   </footer>
-</div><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`;
+</div><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}</script></body></html>`;
 }
 
 /** Opens print dialog in a new tab. Returns false if the browser blocked the pop-up. */
 export function printClientQuotePdf(html: string): boolean {
-  const w = window.open('', '_blank');
-  if (!w) return false;
-  w.document.write(html);
-  w.document.close();
-  return true;
+	const w = window.open('', '_blank');
+	if (!w) return false;
+	w.document.write(html);
+	w.document.close();
+	return true;
 }
