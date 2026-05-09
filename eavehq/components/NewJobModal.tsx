@@ -257,6 +257,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
 
   return (
     <div
+      data-testid="new-job-modal"
       className="fixed inset-0 flex items-center justify-center z-50 px-4"
       style={{ background: 'rgba(31,61,44,0.75)' }}
     >
@@ -298,6 +299,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
             <div>
               <label style={labelStyle}>Job Name *</label>
               <input
+                data-testid="job-name-input"
                 type="text"
                 required
                 value={name}
@@ -315,6 +317,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
               {/* Mode toggle */}
               <div className="flex gap-2 mb-4">
                 <button
+                  data-testid="create-new-client-toggle"
                   type="button"
                   onClick={() => handleModeChange('create')}
                   className="flex-1 py-2 text-xs font-semibold rounded-lg transition-colors"
@@ -327,6 +330,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                   Create new client
                 </button>
                 <button
+                  data-testid="select-existing-client-toggle"
                   type="button"
                   onClick={() => handleModeChange('select')}
                   className="flex-1 py-2 text-xs font-semibold rounded-lg transition-colors"
@@ -344,15 +348,15 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                 <div className="space-y-4">
                   <div>
                     <label style={labelStyle}>Client Name</label>
-                    <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="John Smith" style={inputStyle} />
+                    <input data-testid="client-name-input" type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="John Smith" style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Client Email</label>
-                    <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="john@example.com" style={inputStyle} />
+                    <input data-testid="client-email-input" type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="john@example.com" style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Client Phone</label>
-                    <input type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="(208) 555-0123" style={inputStyle} />
+                    <input data-testid="client-phone-input" type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="(208) 555-0123" style={inputStyle} />
                   </div>
                 </div>
               )}
@@ -367,6 +371,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                       style={{ color: 'var(--color-slate)' }}
                     />
                     <input
+                      data-testid="client-search-input"
                       ref={searchRef}
                       type="text"
                       value={searchQuery}
@@ -396,6 +401,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                   {/* Search results dropdown */}
                   {showDropdown && searchResults.length > 0 && (
                     <div
+                      data-testid="client-search-dropdown"
                       ref={dropdownRef}
                       className="absolute z-10 w-full mt-1 rounded-lg overflow-hidden"
                       style={{
@@ -408,6 +414,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                     >
                       {searchResults.map(client => (
                         <button
+                          data-testid="client-search-result"
                           key={client.id}
                           type="button"
                           className="w-full text-left px-4 py-3 transition-colors"
@@ -430,6 +437,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                   {/* Selected client confirmation */}
                   {selectedClient && (
                     <div
+                      data-testid="selected-client-chip"
                       className="mt-2 px-3 py-2 rounded-lg flex items-center justify-between"
                       style={{ background: 'rgba(58,99,73,0.08)', border: '1px solid rgba(58,99,73,0.2)' }}
                     >
@@ -442,6 +450,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                         )}
                       </div>
                       <button
+                        data-testid="clear-selected-client"
                         type="button"
                         onClick={() => { setSelectedClient(null); setSearchQuery(''); }}
                         className="ml-2 p-1 rounded"
@@ -503,6 +512,7 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
                 Cancel
               </button>
               <button
+                data-testid="submit-job-button"
                 type="submit"
                 disabled={submitting || !name.trim()}
                 className="flex-1 font-bold py-3 rounded-lg transition-all active:scale-95"
