@@ -29,6 +29,7 @@ const EstimatorPage: React.FC = () => {
   }, [profile?.id]);
 
   useEffect(() => {
+    reset();
     const stored = sessionStorage.getItem('restore_quote');
     if (stored) {
       try {
