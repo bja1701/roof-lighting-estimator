@@ -64,6 +64,79 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
       .single();
     setSubmitting(false);
     if (err) { setError(err.message); return; }
+
+    // Upsert client and link to job — errors are silently swallowed, never block job creation
+    const trimEmail = clientEmail.trim();
+    const trimPhone = clientPhone.trim();
+    const trimName = clientName.trim();
+    if (trimName || trimEmail || trimPhone) {
+      try {
+        let clientId: string | null = null;
+
+        if (trimEmail) {
+          const { data: existing } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('contractor_id', user.id)
+            .eq('email', trimEmail)
+            .maybeSingle();
+          if (existing?.id) {
+            clientId = existing.id;
+          } else {
+            const { data: inserted } = await supabase
+              .from('clients')
+              .insert({
+                contractor_id: user.id,
+                name: trimName || trimEmail,
+                email: trimEmail,
+                phone: trimPhone || null,
+              })
+              .select('id')
+              .single();
+            clientId = inserted?.id ?? null;
+          }
+        } else if (trimPhone) {
+          const { data: existing } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('contractor_id', user.id)
+            .eq('phone', trimPhone)
+            .maybeSingle();
+          if (existing?.id) {
+            clientId = existing.id;
+          } else {
+            const { data: inserted } = await supabase
+              .from('clients')
+              .insert({
+                contractor_id: user.id,
+                name: trimName || trimPhone,
+                phone: trimPhone,
+              })
+              .select('id')
+              .single();
+            clientId = inserted?.id ?? null;
+          }
+        } else {
+          // Name only — always insert a new client row (no dedup)
+          const { data: inserted } = await supabase
+            .from('clients')
+            .insert({ contractor_id: user.id, name: trimName })
+            .select('id')
+            .single();
+          clientId = inserted?.id ?? null;
+        }
+
+        if (clientId) {
+          await supabase
+            .from('jobs')
+            .update({ client_id: clientId })
+            .eq('id', data.id);
+        }
+      } catch {
+        // Client upsert failed — job already created, proceed normally
+      }
+    }
+
     onCreated(data.id);
   };
 
