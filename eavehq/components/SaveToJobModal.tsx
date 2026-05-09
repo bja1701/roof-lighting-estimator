@@ -113,25 +113,6 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
     if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
     const jobAddress = await resolveAddressForJob(estimateSiteAddress, satelliteCenter);
     await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
-
-    // Sync address to client record if job has one — silently swallow errors, never block
-    try {
-      const { data: jobRow } = await supabase
-        .from('jobs')
-        .select('client_id')
-        .eq('id', jobId)
-        .single();
-      if (jobRow?.client_id && jobAddress) {
-        await supabase
-          .from('clients')
-          .update({ address_street: jobAddress })
-          .eq('id', jobRow.client_id)
-          .is('address_street', null);
-      }
-    } catch {
-      // Address sync failed — address save already succeeded, proceed normally
-    }
-
     await incrementEstimates();
     setSubmitting(false);
     onSaved();

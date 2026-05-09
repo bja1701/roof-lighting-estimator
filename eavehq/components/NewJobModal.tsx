@@ -68,12 +68,13 @@ export default function NewJobModal({ onCreated, onClose }: Props) {
     }
     setSearching(true);
     setSearchFailed(false);
+    const safeQuery = query.replace(/[(),]/g, '');
     try {
       const { data, error: searchErr } = await supabase
         .from('clients')
         .select('id, name, email, phone')
         .eq('contractor_id', user.id)
-        .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+        .or(`name.ilike.%${safeQuery}%,email.ilike.%${safeQuery}%`)
         .order('name')
         .limit(8);
 
