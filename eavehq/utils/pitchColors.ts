@@ -18,7 +18,7 @@ export const PITCH_COLORS: Record<string, string> = {
   "18/12": "#450a0a",
 };
 
-export const DEFAULT_LINE_COLOR = "#38bdf8"; // Cyan (Unassigned/New)
+export const DEFAULT_LINE_COLOR = "#ef4444"; // Red (Unassigned/New)
 export const SELECTED_LINE_COLOR = "#22c55e"; // Bright Green
 
 /**
