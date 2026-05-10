@@ -83,6 +83,8 @@ export default function JobDetailPage() {
 
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
+  const [stripeConnectBlockOpen, setStripeConnectBlockOpen] = useState(false);
+
   const handleStatusChange = (newStatus: JobStatus) =>
     setJob(prev => prev ? { ...prev, status: newStatus } : prev);
 
@@ -118,6 +120,10 @@ export default function JobDetailPage() {
   };
 
   const handleOpenSendOptions = () => {
+    if (!profile?.stripe_connect_enabled) {
+      setStripeConnectBlockOpen(true);
+      return;
+    }
     setSendOptionsDepositPct(String(job?.deposit_percent ?? 50));
     setSendOptionsError(null);
     setSendOptionsOpen(true);
@@ -661,6 +667,53 @@ export default function JobDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Stripe Connect blocking modal */}
+      {stripeConnectBlockOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+          style={{ background: 'rgba(31,61,44,0.75)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stripe-connect-block-title"
+          onClick={e => e.target === e.currentTarget && setStripeConnectBlockOpen(false)}
+        >
+          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(234,88,12,0.1)' }}>
+                <AlertTriangle size={18} style={{ color: 'var(--color-destructive)' }} />
+              </div>
+              <h2 id="stripe-connect-block-title" className="text-base font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+                Stripe Connect required
+              </h2>
+            </div>
+            <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--color-slate)' }}>
+              You must complete Stripe Connect setup before sending quotes to clients. This allows you to collect deposits and payments directly.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStripeConnectBlockOpen(false)}
+                className="flex-1 rounded-lg py-2.5 text-sm font-medium"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStripeConnectBlockOpen(false); navigate('/settings'); }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity"
+                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                <ArrowRight size={15} />
+                Go to Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Send Options modal */}
       {sendOptionsOpen && (
