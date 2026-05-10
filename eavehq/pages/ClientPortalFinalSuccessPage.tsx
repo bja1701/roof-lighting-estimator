@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 
 interface ContractorProfile {
   company_name: string | null;
+  full_name: string | null;
   logo_url: string | null;
 }
 
@@ -28,7 +29,7 @@ export default function ClientPortalFinalSuccessPage() {
     if (jobData?.user_id) {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('company_name, logo_url')
+        .select('company_name, full_name, logo_url')
         .eq('id', jobData.user_id)
         .single();
       setContractor((profileData as ContractorProfile) ?? null);
@@ -76,10 +77,10 @@ export default function ClientPortalFinalSuccessPage() {
             Final payment received!
           </h1>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-slate)' }}>
-            {contractor?.company_name ? (
+            {contractor?.company_name || contractor?.full_name ? (
               <>
                 <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>
-                  {contractor.company_name}
+                  {contractor.company_name || contractor.full_name}
                 </span>{' '}
                 thanks you — your account is settled in full.
               </>
