@@ -22,6 +22,7 @@ interface Quote {
 
 interface ContractorProfile {
   company_name: string | null;
+  full_name: string | null;
   logo_url: string | null;
 }
 
@@ -77,7 +78,7 @@ export default function ClientPortalPage() {
         .order('created_at', { ascending: true }),
       supabase
         .from('profiles')
-        .select('company_name, logo_url')
+        .select('company_name, full_name, logo_url')
         .eq('id', jobData.user_id)
         .single(),
     ]);
@@ -209,7 +210,7 @@ export default function ClientPortalPage() {
           )}
           <div>
             <p className="font-bold text-lg leading-tight" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}>
-              {contractor?.company_name ?? 'Your Contractor'}
+              {contractor?.company_name || contractor?.full_name || 'Your Contractor'}
             </p>
             {job.address && (
               <p className="text-sm mt-0.5" style={{ color: 'var(--color-slate)' }}>{job.address}</p>
