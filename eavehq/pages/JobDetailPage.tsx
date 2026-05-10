@@ -83,10 +83,29 @@ export default function JobDetailPage() {
 
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
-  const [stripeConnectBlockOpen, setStripeConnectBlockOpen] = useState(false);
+  // Schedule date modal
+  const [scheduleDateOpen, setScheduleDateOpen] = useState(false);
+  const [scheduleDateValue, setScheduleDateValue] = useState('');
+  const [scheduleDatePending, setScheduleDatePending] = useState<JobStatus | null>(null);
+  const [scheduleDateSaving, setScheduleDateSaving] = useState(false);
 
   const handleStatusChange = (newStatus: JobStatus) =>
     setJob(prev => prev ? { ...prev, status: newStatus } : prev);
+
+  const handleScheduleDateConfirm = async () => {
+    if (!job || !id || !scheduleDatePending || !scheduleDateValue) return;
+    setScheduleDateSaving(true);
+    const { error } = await supabase
+      .from('jobs')
+      .update({ status: scheduleDatePending, scheduled_date: scheduleDateValue })
+      .eq('id', id);
+    setScheduleDateSaving(false);
+    if (error) { toast(error.message, 'error'); return; }
+    handleStatusChange(scheduleDatePending);
+    handleJobUpdate({ scheduled_date: scheduleDateValue });
+    setScheduleDateOpen(false);
+    setScheduleDatePending(null);
+  };
 
   const handleJobUpdate = (updates: Partial<Job>) =>
     setJob(prev => prev ? { ...prev, ...updates } : prev);
@@ -120,10 +139,6 @@ export default function JobDetailPage() {
   };
 
   const handleOpenSendOptions = () => {
-    if (!profile?.stripe_connect_enabled) {
-      setStripeConnectBlockOpen(true);
-      return;
-    }
     setSendOptionsDepositPct(String(job?.deposit_percent ?? 50));
     setSendOptionsError(null);
     setSendOptionsOpen(true);
@@ -209,16 +224,23 @@ export default function JobDetailPage() {
     const isStartedTransition = job.status === 'scheduled' && nextStatus === 'in_progress';
     if (isStartedTransition && quotes.length === 0) return;
 
-    if (
-      job.status === 'estimate_sent' && nextStatus === 'scheduled' &&
-      !job.deposit_paid_at && job.deposit_amount == null
-    ) {
-      setConfirmDialog({
-        title: 'No deposit recorded',
-        message: 'No deposit has been recorded for this job. Mark as Scheduled anyway?',
-        confirmLabel: cfg.nextManualLabel ?? 'Continue',
-        onConfirm: () => { setConfirmDialog(null); doAdvance(nextStatus); },
-      });
+    if (nextStatus === 'scheduled') {
+      // Show date picker modal before writing to DB
+      const today = new Date().toISOString().split('T')[0];
+      setScheduleDateValue(job.scheduled_date ?? today);
+      setScheduleDatePending(nextStatus);
+
+      if (!job.deposit_paid_at && job.deposit_amount == null) {
+        // Warn about missing deposit via confirm, then open date modal on confirm
+        setConfirmDialog({
+          title: 'No deposit recorded',
+          message: 'No deposit has been recorded for this job. Mark as Scheduled anyway?',
+          confirmLabel: cfg.nextManualLabel ?? 'Continue',
+          onConfirm: () => { setConfirmDialog(null); setScheduleDateOpen(true); },
+        });
+      } else {
+        setScheduleDateOpen(true);
+      }
       return;
     }
 
@@ -286,6 +308,8 @@ export default function JobDetailPage() {
     navigate('/estimator');
   };
 
+  const totalValue = quotes.reduce((sum, q) => sum + (q.total_price ?? 0), 0);
+  const totalFt    = quotes.reduce((sum, q) => sum + (q.total_linear_ft ?? 0), 0);
   const canEstimate = !isFreeTierEstimatorExhausted(profile);
 
   if (loading) {
@@ -559,13 +583,27 @@ export default function JobDetailPage() {
 
         {/* Stats — only shown when there are estimates */}
         {quotes.length > 0 && (
-          <div className="px-5 py-4 mb-8 rounded-xl" style={{ background: 'var(--color-card)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-slate)' }}>
-              Estimates
-            </p>
-            <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-ink)' }}>
-              {String(quotes.length)}
-            </p>
+          <div
+            className="grid grid-cols-3 gap-px mb-8 rounded-xl overflow-hidden"
+            style={{ background: 'var(--color-border)' }}
+          >
+            {[
+              { label: 'Estimates', value: String(quotes.length) },
+              { label: 'Total Value', value: `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+              { label: 'Linear Ft', value: `${totalFt.toFixed(0)} ft` },
+            ].map(({ label, value }) => (
+              <div key={label} className="px-5 py-4" style={{ background: 'var(--color-card)' }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-slate)' }}>
+                  {label}
+                </p>
+                <p
+                  className="text-xl font-bold"
+                  style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-ink)' }}
+                >
+                  {value}
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
@@ -652,47 +690,62 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Stripe Connect blocking modal */}
-      {stripeConnectBlockOpen && (
+      {/* Schedule date modal */}
+      {scheduleDateOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           style={{ background: 'rgba(31,61,44,0.75)' }}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="stripe-connect-block-title"
-          onClick={e => e.target === e.currentTarget && setStripeConnectBlockOpen(false)}
+          aria-labelledby="schedule-date-title"
+          onClick={e => e.target === e.currentTarget && !scheduleDateSaving && setScheduleDateOpen(false)}
         >
           <div className="w-full max-w-sm rounded-xl p-6" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(234,88,12,0.1)' }}>
-                <AlertTriangle size={18} style={{ color: 'var(--color-destructive)' }} />
-              </div>
-              <h2 id="stripe-connect-block-title" className="text-base font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
-                Stripe Connect required
-              </h2>
-            </div>
-            <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--color-slate)' }}>
-              You must complete Stripe Connect setup before sending quotes to clients. This allows you to collect deposits and payments directly.
+            <h2
+              id="schedule-date-title"
+              className="text-base font-bold mb-2"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+            >
+              Pick a scheduled date
+            </h2>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-slate)' }}>
+              Choose the date this job is scheduled for.
             </p>
+            <input
+              type="date"
+              required
+              value={scheduleDateValue}
+              onChange={e => setScheduleDateValue(e.target.value)}
+              disabled={scheduleDateSaving}
+              className="w-full rounded-lg px-3 py-2 text-sm mb-5 outline-none disabled:opacity-50"
+              style={{
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-ink)',
+                fontFamily: 'var(--font-body)',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+            />
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setStripeConnectBlockOpen(false)}
-                className="flex-1 rounded-lg py-2.5 text-sm font-medium"
+                onClick={() => { setScheduleDateOpen(false); setScheduleDatePending(null); }}
+                disabled={scheduleDateSaving}
+                className="flex-1 rounded-lg py-2.5 text-sm font-medium disabled:opacity-50"
                 style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => { setStripeConnectBlockOpen(false); navigate('/settings'); }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity"
+                onClick={() => void handleScheduleDateConfirm()}
+                disabled={scheduleDateSaving || !scheduleDateValue}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
                 style={{ background: 'var(--color-primary)', color: '#fff' }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                <ArrowRight size={15} />
-                Go to Settings
+                {scheduleDateSaving ? <><Loader2 size={15} className="animate-spin" /> Saving…</> : 'Confirm'}
               </button>
             </div>
           </div>

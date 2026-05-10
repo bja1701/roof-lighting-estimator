@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Briefcase, Users, Ruler, Settings, Shield, LogOut, Lock, Zap } from 'lucide-react';
+import { Briefcase, Users, Ruler, Settings, Shield, LogOut, Lock, Zap, CalendarDays } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useUpgradeModal } from '../hooks/useUpgradeModal';
@@ -11,10 +11,11 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', Icon: Briefcase, path: '/' },
-  { label: 'Clients',   Icon: Users,     path: '/clients' },
-  { label: 'Estimator', Icon: Ruler,     path: '/estimator' },
-  { label: 'Settings',  Icon: Settings,  path: '/settings' },
+  { label: 'Dashboard', Icon: Briefcase,    path: '/' },
+  { label: 'Clients',   Icon: Users,        path: '/clients' },
+  { label: 'Schedule',  Icon: CalendarDays, path: '/schedule' },
+  { label: 'Estimator', Icon: Ruler,        path: '/estimator' },
+  { label: 'Settings',  Icon: Settings,     path: '/settings' },
 ];
 
 export default function SharedLayout({ children }: Props) {

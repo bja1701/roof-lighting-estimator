@@ -21,6 +21,7 @@ import ClientPortalSuccessPage from './pages/ClientPortalSuccessPage';
 import ClientPortalFinalSuccessPage from './pages/ClientPortalFinalSuccessPage';
 import InvoicePage from './pages/InvoicePage';
 import FoundersPage from './pages/FoundersPage';
+import ScheduleCalendarPage from './pages/ScheduleCalendarPage';
 
 function AppRoutes() {
   const { session, loading: authLoading, init } = useAuth();
@@ -91,6 +92,7 @@ function AppRoutes() {
         <Route path="/estimator" element={<EstimatorRouteGuard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/schedule" element={<ScheduleCalendarPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
