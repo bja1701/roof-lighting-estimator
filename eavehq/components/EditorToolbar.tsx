@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pencil, MousePointer, ZoomIn, Undo2, CheckCheck } from 'lucide-react';
+import { Pencil, MousePointer, ZoomIn, Undo2, Redo2, CheckCheck } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
 const EditorToolbar: React.FC = () => {
@@ -13,7 +13,11 @@ const EditorToolbar: React.FC = () => {
     selectLine,
     isSuperZoom,
     toggleSuperZoom,
-    setActiveDrawNode
+    setActiveDrawNode,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useEstimatorStore();
 
   useEffect(() => {
@@ -79,13 +83,17 @@ const EditorToolbar: React.FC = () => {
       id: 'undo',
       Icon: Undo2,
       label: 'Undo',
-      shortcut: 'W',
-      onClick: () => {
-        if (nodes.length > 0) {
-          const lastNode = nodes[nodes.length - 1];
-          removeNode(lastNode.id);
-        }
-      },
+      shortcut: '⌘Z',
+      onClick: undo,
+      disabled: !canUndo,
+    },
+    {
+      id: 'redo',
+      Icon: Redo2,
+      label: 'Redo',
+      shortcut: '⌘⇧Z',
+      onClick: redo,
+      disabled: !canRedo,
     },
     {
       id: 'finish',
@@ -93,8 +101,9 @@ const EditorToolbar: React.FC = () => {
       label: 'Finish',
       shortcut: 'E',
       onClick: () => setActiveDrawNode(null),
+      disabled: false,
     },
-  ] as const;
+  ];
 
   return (
     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0">
@@ -132,15 +141,16 @@ const EditorToolbar: React.FC = () => {
 
         <div className="w-px h-6 mx-1" style={{ background: 'rgba(255,255,255,0.15)' }} />
 
-        {actions.map(({ id, Icon, label, shortcut, onClick }) => (
+        {actions.map(({ id, Icon, label, shortcut, onClick, disabled }) => (
           <button
             key={id}
             onClick={onClick}
+            disabled={disabled}
             title={`${label} (${shortcut})`}
-            className="relative group/btn p-3 rounded-xl transition-all duration-150 active:scale-95"
-            style={{ color: 'rgba(255,255,255,0.45)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+            className="relative group/btn p-3 rounded-xl transition-all duration-150 active:scale-95 disabled:cursor-not-allowed"
+            style={{ color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.45)' }}
+            onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { if (!disabled) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
           >
             <Icon size={18} />
             <span

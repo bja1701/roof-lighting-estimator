@@ -17,11 +17,11 @@ const EstimatorPage: React.FC = () => {
   const reset = useEstimatorStore((s) => s.reset);
   const loadProfilePricing = useEstimatorStore((s) => s.loadProfilePricing);
   const restoreCanvas = useEstimatorStore((s) => s.restoreCanvas);
+  const undo = useEstimatorStore((s) => s.undo);
+  const redo = useEstimatorStore((s) => s.redo);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
-  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const pitchPaneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,15 +31,36 @@ const EstimatorPage: React.FC = () => {
   }, [profile?.id]);
 
   useEffect(() => {
-    reset();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const metaKey = isMac ? e.metaKey : e.ctrlKey;
+      if (!metaKey) return;
+      if (e.key === 'z' || e.key === 'Z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      }
+      if (!e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  useEffect(() => {
     const stored = sessionStorage.getItem('restore_quote');
     if (stored) {
       try {
-        const { canvasState, jobId, quoteId, label } = JSON.parse(stored);
+        const { canvasState, jobId } = JSON.parse(stored);
         if (canvasState) restoreCanvas(canvasState);
         if (jobId) setSavedJobId(jobId);
-        if (quoteId) setEditingQuoteId(quoteId);
-        if (label) setEditingLabel(label);
       } catch {}
       sessionStorage.removeItem('restore_quote');
     }
@@ -156,8 +177,6 @@ const EstimatorPage: React.FC = () => {
         <SaveToJobModal
           onSaved={handleSaved}
           onClose={() => setShowSaveModal(false)}
-          editingQuoteId={editingQuoteId}
-          editingLabel={editingLabel}
         />
       )}
     </div>

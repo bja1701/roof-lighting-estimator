@@ -4,12 +4,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { EstimatorState, LineType, LatLng } from '../types/index';
 import { calculateDistance, getMultiplierFromPitch } from '../utils/geometry';
 
+interface UndoSnapshot {
+  nodes: EstimatorState['nodes'];
+  lines: EstimatorState['lines'];
+}
+
 interface ExtendedEstimatorState extends EstimatorState {
   // Decoupled Positions
   satelliteCenter: LatLng;
   streetViewPosition: LatLng;
   /** Human-readable site address from Places search (used when saving a quote → job card / Street View). */
   estimateSiteAddress: string | null;
+
+  // Undo / Redo
+  undoStack: UndoSnapshot[];
+  redoStack: UndoSnapshot[];
+  canUndo: boolean;
+  canRedo: boolean;
 
   // Actions
   setMapCenter: (location: LatLng) => void; // Updates Satellite Only (used by Search)
@@ -18,18 +29,29 @@ interface ExtendedEstimatorState extends EstimatorState {
   syncStreetViewToSatellite: () => void;
   loadProfilePricing: (pricePerFt: number, controllerFee: number, includeController: boolean) => void;
   restoreCanvas: (canvasState: any) => void;
+  pushUndo: () => void;
+  undo: () => void;
+  redo: () => void;
 }
+
+const UNDO_MAX_DEPTH = 50;
 
 export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   // Initial State
   nodes: [],
   lines: [],
-  
+
   // Navigation State
   // Default: 1568 E 550 S, Springville, UT
-  satelliteCenter: { lat: 40.157588, lng: -111.575344 }, 
+  satelliteCenter: { lat: 40.157588, lng: -111.575344 },
   streetViewPosition: { lat: 40.157588, lng: -111.575344 },
   estimateSiteAddress: null,
+
+  // Undo / Redo
+  undoStack: [],
+  redoStack: [],
+  canUndo: false,
+  canRedo: false,
 
   // Pricing / Domain
   pricePerFt: 25.0,
@@ -172,6 +194,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
           : get().estimateSiteAddress,
       selectedLineId: null,
       activeDrawNodeId: null,
+      undoStack: [],
+      redoStack: [],
+      canUndo: false,
+      canRedo: false,
     });
     get().calculateTotals();
   },
@@ -195,10 +221,65 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
       totalLength3D: 0,
       estimatedCost: 0,
       activeDrawNodeId: null,
-      estimateSiteAddress: null,
-      satelliteCenter: { lat: 40.157588, lng: -111.575344 },
-      streetViewPosition: { lat: 40.157588, lng: -111.575344 },
+      undoStack: [],
+      redoStack: [],
+      canUndo: false,
+      canRedo: false,
     });
+  },
+
+  pushUndo: () => {
+    const { nodes, lines, undoStack } = get();
+    const snapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const trimmed = undoStack.length >= UNDO_MAX_DEPTH
+      ? undoStack.slice(undoStack.length - UNDO_MAX_DEPTH + 1)
+      : undoStack;
+    set({ undoStack: [...trimmed, snapshot], redoStack: [], canUndo: true, canRedo: false });
+  },
+
+  undo: () => {
+    const { undoStack, redoStack, nodes, lines } = get();
+    if (undoStack.length === 0) return;
+    const snapshot = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, undoStack.length - 1);
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const newRedoStack = [...redoStack, currentSnapshot];
+    set({
+      nodes: snapshot.nodes,
+      lines: snapshot.lines,
+      undoStack: newUndoStack,
+      redoStack: newRedoStack,
+      canUndo: newUndoStack.length > 0,
+      canRedo: true,
+    });
+    get().calculateTotals();
+  },
+
+  redo: () => {
+    const { undoStack, redoStack, nodes, lines } = get();
+    if (redoStack.length === 0) return;
+    const snapshot = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, redoStack.length - 1);
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const newUndoStack = [...undoStack, currentSnapshot];
+    set({
+      nodes: snapshot.nodes,
+      lines: snapshot.lines,
+      undoStack: newUndoStack,
+      redoStack: newRedoStack,
+      canUndo: true,
+      canRedo: newRedoStack.length > 0,
+    });
+    get().calculateTotals();
   },
 
   calculateTotals: () => {
