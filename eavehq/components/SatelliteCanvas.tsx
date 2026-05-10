@@ -50,6 +50,9 @@ const SatelliteCanvas: React.FC = () => {
   // Touch drag state
   const capturedNodeId = useRef<string | null>(null);
 
+  // Wrapper ref for native (non-passive) touch listeners
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   // Detect touch device at mount; switches gestureHandling to 'cooperative' so
   // normal map pan still works when no node is grabbed.
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -166,10 +169,16 @@ const SatelliteCanvas: React.FC = () => {
 
   // --- Touch Drag Handlers ---
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+  // B3: isSuperZoom guard added as first line in both handlers.
+  // B2: useCallback makes these stable references for the useEffect dependency array.
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (isSuperZoom) return; // B3 guard
     if (!overlayProjection || nodes.length === 0) return;
     const touch = e.touches[0];
-    const rect = e.currentTarget.getBoundingClientRect();
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     const win = window as any;
@@ -195,16 +204,19 @@ const SatelliteCanvas: React.FC = () => {
 
     if (closestId) {
       capturedNodeId.current = closestId;
-      e.preventDefault(); // block map pan
+      e.preventDefault(); // block map pan — works because listener is { passive: false }
     }
     // If no node found, do nothing — map pan proceeds normally
-  };
+  }, [isSuperZoom, overlayProjection, nodes]);
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (isSuperZoom) return; // B3 guard
     if (!capturedNodeId.current || !overlayProjection) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = e.currentTarget.getBoundingClientRect();
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     const win = window as any;
@@ -214,7 +226,21 @@ const SatelliteCanvas: React.FC = () => {
     if (latLng) {
       updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
     }
-  };
+  }, [isSuperZoom, overlayProjection, updateNodePosition]);
+
+  // B2: Attach touchstart/touchmove as native { passive: false } listeners so
+  // e.preventDefault() actually works. React attaches synthetic touch events
+  // at the root as passive, making preventDefault() a no-op on Chrome/Safari.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [handleTouchStart, handleTouchMove]);
 
   const handleTouchEnd = (_e: React.TouchEvent<HTMLDivElement>) => {
     if (!capturedNodeId.current) return;
@@ -241,12 +267,11 @@ const SatelliteCanvas: React.FC = () => {
          The Transform Wrapper 
       */}
       <div
+        ref={wrapperRef}
         className={`w-full h-full transition-transform duration-300 origin-center ${
             isSuperZoom ? 'scale-[2]' : 'scale-100'
         } ${cursorClass}`}
         onClick={handleCanvasClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         <GoogleMap

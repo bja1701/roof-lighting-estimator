@@ -138,7 +138,7 @@ const EstimatorPage: React.FC = () => {
             </div>
             <div
               ref={pitchPaneRef}
-              className={`order-2 lg:h-full flex-[1.8] min-w-[300px] z-10 relative transition-all duration-200 ${
+              className={`order-2 lg:h-full flex-[1.8] min-w-[300px] z-10 relative transition-all duration-200 overflow-hidden ${
                 isPitchPanelCollapsed ? 'h-10' : 'h-[45vh]'
               } lg:h-full`}
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
