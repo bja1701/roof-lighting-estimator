@@ -39,14 +39,23 @@ const SatelliteCanvas: React.FC = () => {
     activeDrawNodeId,
     setActiveDrawNode,
     updateNodePosition,
-    pushUndo,
   } = useEstimatorStore();
 
   const [showHelper, setShowHelper] = useState(false);
-  
+
   // We need the overlay projection to convert pixels (from the div click) to LatLng
   const [overlayProjection, setOverlayProjection] = useState<any>(null);
   const mapRef = useRef<any>(null);
+
+  // Touch drag state
+  const capturedNodeId = useRef<string | null>(null);
+
+  // Wrapper ref for native (non-passive) touch listeners
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Detect touch device at mount; switches gestureHandling to 'cooperative' so
+  // normal map pan still works when no node is grabbed.
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
   // --- Tool Helper Fade Logic ---
   useEffect(() => {
@@ -97,9 +106,8 @@ const SatelliteCanvas: React.FC = () => {
         const latLng = overlayProjection.fromContainerPixelToLatLng(point);
 
         if (latLng) {
-            pushUndo();
             const newNodeId = addNode(latLng.lat(), latLng.lng());
-
+            
             // Auto-connect if we have a previous node
             if (activeDrawNodeId) {
                 addLine(activeDrawNodeId, newNodeId, 'eave');
@@ -138,7 +146,6 @@ const SatelliteCanvas: React.FC = () => {
   // Node Drag End (for repositioning in Select Mode)
   const handleNodeDragEnd = (e: any, nodeId: string) => {
     if (e.latLng) {
-      pushUndo();
       updateNodePosition(nodeId, e.latLng.lat(), e.latLng.lng());
     }
   };
@@ -151,7 +158,6 @@ const SatelliteCanvas: React.FC = () => {
     // Only allow linking in Draw mode
     if (selectedTool === 'draw') {
         if (activeDrawNodeId && activeDrawNodeId !== nodeId) {
-            pushUndo();
             addLine(activeDrawNodeId, nodeId, 'eave');
             setActiveDrawNode(nodeId);
         } else {
@@ -160,6 +166,87 @@ const SatelliteCanvas: React.FC = () => {
     }
   };
 
+
+  // --- Touch Drag Handlers ---
+
+  // B3: isSuperZoom guard added as first line in both handlers.
+  // B2: useCallback makes these stable references for the useEffect dependency array.
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (isSuperZoom) return; // B3 guard
+    if (!overlayProjection || nodes.length === 0) return;
+    const touch = e.touches[0];
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+    const point = new win.google.maps.Point(x, y);
+    const touchLatLng = overlayProjection.fromContainerPixelToLatLng(point);
+    if (!touchLatLng) return;
+
+    // Find the nearest node within 24px
+    let closestId: string | null = null;
+    let closestDist = Infinity;
+    for (const node of nodes) {
+      const nodePoint = overlayProjection.fromLatLngToContainerPixel(
+        new win.google.maps.LatLng(node.lat, node.lng)
+      );
+      if (!nodePoint) continue;
+      const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
+      if (dist < 24 && dist < closestDist) {
+        closestDist = dist;
+        closestId = node.id;
+      }
+    }
+
+    if (closestId) {
+      capturedNodeId.current = closestId;
+      e.preventDefault(); // block map pan — works because listener is { passive: false }
+    }
+    // If no node found, do nothing — map pan proceeds normally
+  }, [isSuperZoom, overlayProjection, nodes]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (isSuperZoom) return; // B3 guard
+    if (!capturedNodeId.current || !overlayProjection) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+    const point = new win.google.maps.Point(x, y);
+    const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+    if (latLng) {
+      updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+    }
+  }, [isSuperZoom, overlayProjection, updateNodePosition]);
+
+  // B2: Attach touchstart/touchmove as native { passive: false } listeners so
+  // e.preventDefault() actually works. React attaches synthetic touch events
+  // at the root as passive, making preventDefault() a no-op on Chrome/Safari.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [handleTouchStart, handleTouchMove]);
+
+  const handleTouchEnd = (_e: React.TouchEvent<HTMLDivElement>) => {
+    if (!capturedNodeId.current) return;
+    // No undo stack on this branch — position is already committed via updateNodePosition
+    capturedNodeId.current = null;
+  };
 
   const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
 
@@ -179,11 +266,13 @@ const SatelliteCanvas: React.FC = () => {
       {/* 
          The Transform Wrapper 
       */}
-      <div 
+      <div
+        ref={wrapperRef}
         className={`w-full h-full transition-transform duration-300 origin-center ${
             isSuperZoom ? 'scale-[2]' : 'scale-100'
         } ${cursorClass}`}
         onClick={handleCanvasClick}
+        onTouchEnd={handleTouchEnd}
       >
         <GoogleMap
           mapContainerStyle={containerStyle}
@@ -191,7 +280,8 @@ const SatelliteCanvas: React.FC = () => {
           zoom={20}
           options={{
             ...mapOptions,
-            draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'), 
+            gestureHandling: isTouchDevice ? 'cooperative' : 'greedy',
+            draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'),
           }}
           onLoad={(map) => { mapRef.current = map; }}
         >

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { useProfile } from '../hooks/useProfile';
 import MapWrapper from '../components/MapWrapper';
@@ -22,6 +22,7 @@ const EstimatorPage: React.FC = () => {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
+  const [isPitchPanelCollapsed, setIsPitchPanelCollapsed] = useState(false);
   const pitchPaneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,7 +156,7 @@ const EstimatorPage: React.FC = () => {
         <main className="flex-1 flex overflow-hidden relative z-0">
           <div className="w-full h-full flex flex-col lg:flex-row">
             <div
-              className="order-1 group relative min-w-[300px] flex-1"
+              className="order-1 group relative min-w-[300px] h-[55vh] lg:h-auto lg:flex-1"
               style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
             >
               <SatelliteCanvas />
@@ -163,9 +164,19 @@ const EstimatorPage: React.FC = () => {
             </div>
             <div
               ref={pitchPaneRef}
-              className="order-2 h-[40vh] lg:h-full flex-[1.8] min-w-[300px] z-10 relative"
+              className={`order-2 lg:h-full flex-[1.8] min-w-[300px] z-10 relative transition-all duration-200 overflow-hidden ${
+                isPitchPanelCollapsed ? 'h-10' : 'h-[45vh]'
+              } lg:h-full`}
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
             >
+              <button
+                className="lg:hidden absolute top-0 right-0 z-20 flex items-center gap-1 px-3 h-10 text-xs font-medium"
+                style={{ color: 'rgba(255,255,255,0.6)' }}
+                onClick={() => setIsPitchPanelCollapsed((v) => !v)}
+                aria-label={isPitchPanelCollapsed ? 'Expand panel' : 'Collapse panel'}
+              >
+                {isPitchPanelCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
               <VisualPitchTool />
               <PricingPanel dockRef={pitchPaneRef} />
             </div>
