@@ -194,7 +194,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
       totalLength2D: 0,
       totalLength3D: 0,
       estimatedCost: 0,
-      activeDrawNodeId: null
+      activeDrawNodeId: null,
+      estimateSiteAddress: null,
+      satelliteCenter: { lat: 40.157588, lng: -111.575344 },
+      streetViewPosition: { lat: 40.157588, lng: -111.575344 },
     });
   },
 
