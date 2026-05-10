@@ -23,6 +23,7 @@ interface Quote {
   line_items: LineItem[];
   discount_amount: number | null;
   discount_type: string | null;
+  discount_note: string | null;
   created_at: string;
 }
 
@@ -73,7 +74,7 @@ export default function InvoicePage() {
     const [{ data: quotesData }, { data: profileData }] = await Promise.all([
       supabase
         .from('quotes')
-        .select('id, label, total_linear_ft, total_price, price_per_foot, controller_fee, notes, line_items, discount_amount, discount_type, created_at')
+        .select('id, label, total_linear_ft, total_price, price_per_foot, controller_fee, notes, line_items, discount_amount, discount_type, discount_note, created_at')
         .eq('job_id', jobData.id)
         .order('created_at', { ascending: true }),
       supabase
@@ -229,6 +230,11 @@ export default function InvoicePage() {
                         {hasDiscount && quote.discount_amount != null && quote.discount_type != null && (
                           <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-success)' }}>
                             {discountLabel(quote.discount_amount, quote.discount_type, rawPrice)}
+                          </p>
+                        )}
+                        {quote.discount_note && (
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>
+                            {quote.discount_note}
                           </p>
                         )}
                       </div>

@@ -18,6 +18,7 @@ interface Quote {
   notes: string | null;
   discount_amount: number | null;
   discount_type: string | null;
+  discount_note: string | null;
 }
 
 interface ContractorProfile {
@@ -73,7 +74,7 @@ export default function ClientPortalPage() {
     const [{ data: quotesData }, { data: profileData }] = await Promise.all([
       supabase
         .from('quotes')
-        .select('id, label, total_linear_ft, total_price, notes, discount_amount, discount_type')
+        .select('id, label, total_linear_ft, total_price, notes, discount_amount, discount_type, discount_note')
         .eq('job_id', jobData.id)
         .order('created_at', { ascending: true }),
       supabase
@@ -357,6 +358,11 @@ export default function ClientPortalPage() {
                             {hasDiscount && quote.discount_amount != null && quote.discount_type != null && (
                               <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-success)' }}>
                                 {discountLabel(quote.discount_amount, quote.discount_type, quote.total_price!)}
+                              </p>
+                            )}
+                            {quote.discount_note && (
+                              <p className="text-sm mt-0.5" style={{ color: 'var(--color-slate)' }}>
+                                {quote.discount_note}
                               </p>
                             )}
                             {quote.notes && (

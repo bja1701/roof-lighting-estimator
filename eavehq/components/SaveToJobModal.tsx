@@ -64,6 +64,8 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editi
   const [newJobName, setNewJobName] = useState('');
   const [label, setLabel] = useState(editingLabel ?? 'Estimate');
   const [notes, setNotes] = useState('');
+  const [discountNote, setDiscountNote] = useState('');
+  const [existingDiscountAmount, setExistingDiscountAmount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
@@ -71,6 +73,21 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editi
   const atLimit = profile?.subscription_status === 'free' && (profile?.estimates_used ?? 0) >= 5;
 
   useEffect(() => { fetchJobs(); }, []);
+
+  useEffect(() => {
+    if (!editingQuoteId) return;
+    void (async () => {
+      const { data } = await supabase
+        .from('quotes')
+        .select('discount_amount, discount_note')
+        .eq('id', editingQuoteId)
+        .single();
+      if (data) {
+        setExistingDiscountAmount(data.discount_amount ?? null);
+        setDiscountNote(data.discount_note ?? '');
+      }
+    })();
+  }, [editingQuoteId]);
 
   const fetchJobs = async () => {
     const { data } = await supabase.from('jobs').select('id, name, address').order('created_at', { ascending: false });
@@ -83,6 +100,8 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editi
     const end = nodes.find(n => n.id === line.endNodeId);
     return { id: line.id, type: line.type, pitch: line.pitch, startNode: start ?? null, endNode: end ?? null };
   });
+
+  const showDiscountNote = existingDiscountAmount != null && existingDiscountAmount !== 0;
 
   const handleSave = async () => {
     if (atLimit) return;
@@ -103,6 +122,7 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editi
       notes: notes.trim() || null, price_per_foot: pricePerFt, controller_fee: controllerFee,
       include_controller: includeController, total_linear_ft: totalLength3D,
       total_price: estimatedCost, canvas_state: canvasState,
+      discount_note: discountNote.trim() || null,
     };
 
     if (editingQuoteId) {
@@ -250,6 +270,19 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editi
                   style={{ ...inputStyle, display: 'block' }}
                 />
               </div>
+
+              {showDiscountNote && (
+                <div>
+                  <label style={labelStyle}>Discount note (optional)</label>
+                  <input
+                    type="text"
+                    value={discountNote}
+                    onChange={e => setDiscountNote(e.target.value)}
+                    placeholder="e.g. Loyalty discount"
+                    style={inputStyle}
+                  />
+                </div>
+              )}
 
               {error && (
                 <div
