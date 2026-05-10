@@ -17,6 +17,8 @@ const EstimatorPage: React.FC = () => {
   const reset = useEstimatorStore((s) => s.reset);
   const loadProfilePricing = useEstimatorStore((s) => s.loadProfilePricing);
   const restoreCanvas = useEstimatorStore((s) => s.restoreCanvas);
+  const undo = useEstimatorStore((s) => s.undo);
+  const redo = useEstimatorStore((s) => s.redo);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
@@ -27,6 +29,30 @@ const EstimatorPage: React.FC = () => {
       loadProfilePricing(profile.price_per_foot, profile.controller_fee, profile.include_controller);
     }
   }, [profile?.id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const metaKey = isMac ? e.metaKey : e.ctrlKey;
+      if (!metaKey) return;
+      if (e.key === 'z' || e.key === 'Z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      }
+      if (!e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('restore_quote');

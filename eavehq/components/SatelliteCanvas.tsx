@@ -24,11 +24,11 @@ const mapOptions = {
 };
 
 const SatelliteCanvas: React.FC = () => {
-  const { 
-    nodes, 
-    lines, 
-    satelliteCenter, 
-    addNode, 
+  const {
+    nodes,
+    lines,
+    satelliteCenter,
+    addNode,
     removeNode,
     addLine,
     selectedTool,
@@ -38,7 +38,8 @@ const SatelliteCanvas: React.FC = () => {
     isSuperZoom,
     activeDrawNodeId,
     setActiveDrawNode,
-    updateNodePosition
+    updateNodePosition,
+    pushUndo,
   } = useEstimatorStore();
 
   const [showHelper, setShowHelper] = useState(false);
@@ -100,6 +101,7 @@ const SatelliteCanvas: React.FC = () => {
             
             // Auto-connect if we have a previous node
             if (activeDrawNodeId) {
+                pushUndo();
                 addLine(activeDrawNodeId, newNodeId, 'eave');
             }
             setActiveDrawNode(newNodeId);
@@ -136,6 +138,7 @@ const SatelliteCanvas: React.FC = () => {
   // Node Drag End (for repositioning in Select Mode)
   const handleNodeDragEnd = (e: any, nodeId: string) => {
     if (e.latLng) {
+      pushUndo();
       updateNodePosition(nodeId, e.latLng.lat(), e.latLng.lng());
     }
   };
@@ -148,6 +151,7 @@ const SatelliteCanvas: React.FC = () => {
     // Only allow linking in Draw mode
     if (selectedTool === 'draw') {
         if (activeDrawNodeId && activeDrawNodeId !== nodeId) {
+            pushUndo();
             addLine(activeDrawNodeId, nodeId, 'eave');
             setActiveDrawNode(nodeId);
         } else {
