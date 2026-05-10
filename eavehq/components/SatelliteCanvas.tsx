@@ -24,11 +24,11 @@ const mapOptions = {
 };
 
 const SatelliteCanvas: React.FC = () => {
-  const { 
-    nodes, 
-    lines, 
-    satelliteCenter, 
-    addNode, 
+  const {
+    nodes,
+    lines,
+    satelliteCenter,
+    addNode,
     removeNode,
     addLine,
     selectedTool,
@@ -38,14 +38,21 @@ const SatelliteCanvas: React.FC = () => {
     isSuperZoom,
     activeDrawNodeId,
     setActiveDrawNode,
-    updateNodePosition
+    updateNodePosition,
   } = useEstimatorStore();
 
   const [showHelper, setShowHelper] = useState(false);
-  
+
   // We need the overlay projection to convert pixels (from the div click) to LatLng
   const [overlayProjection, setOverlayProjection] = useState<any>(null);
   const mapRef = useRef<any>(null);
+
+  // Touch drag state
+  const capturedNodeId = useRef<string | null>(null);
+
+  // Detect touch device at mount; switches gestureHandling to 'cooperative' so
+  // normal map pan still works when no node is grabbed.
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
   // --- Tool Helper Fade Logic ---
   useEffect(() => {
@@ -157,6 +164,64 @@ const SatelliteCanvas: React.FC = () => {
   };
 
 
+  // --- Touch Drag Handlers ---
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!overlayProjection || nodes.length === 0) return;
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+    const point = new win.google.maps.Point(x, y);
+    const touchLatLng = overlayProjection.fromContainerPixelToLatLng(point);
+    if (!touchLatLng) return;
+
+    // Find the nearest node within 24px
+    let closestId: string | null = null;
+    let closestDist = Infinity;
+    for (const node of nodes) {
+      const nodePoint = overlayProjection.fromLatLngToContainerPixel(
+        new win.google.maps.LatLng(node.lat, node.lng)
+      );
+      if (!nodePoint) continue;
+      const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
+      if (dist < 24 && dist < closestDist) {
+        closestDist = dist;
+        closestId = node.id;
+      }
+    }
+
+    if (closestId) {
+      capturedNodeId.current = closestId;
+      e.preventDefault(); // block map pan
+    }
+    // If no node found, do nothing — map pan proceeds normally
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!capturedNodeId.current || !overlayProjection) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+    const point = new win.google.maps.Point(x, y);
+    const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+    if (latLng) {
+      updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+    }
+  };
+
+  const handleTouchEnd = (_e: React.TouchEvent<HTMLDivElement>) => {
+    if (!capturedNodeId.current) return;
+    // No undo stack on this branch — position is already committed via updateNodePosition
+    capturedNodeId.current = null;
+  };
+
   const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
 
   // Determine Cursor Style
@@ -175,11 +240,14 @@ const SatelliteCanvas: React.FC = () => {
       {/* 
          The Transform Wrapper 
       */}
-      <div 
+      <div
         className={`w-full h-full transition-transform duration-300 origin-center ${
             isSuperZoom ? 'scale-[2]' : 'scale-100'
         } ${cursorClass}`}
         onClick={handleCanvasClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <GoogleMap
           mapContainerStyle={containerStyle}
@@ -187,7 +255,8 @@ const SatelliteCanvas: React.FC = () => {
           zoom={20}
           options={{
             ...mapOptions,
-            draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'), 
+            gestureHandling: isTouchDevice ? 'cooperative' : 'greedy',
+            draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'),
           }}
           onLoad={(map) => { mapRef.current = map; }}
         >
