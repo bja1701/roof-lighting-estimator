@@ -7,7 +7,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
 interface Job { id: string; name: string; address: string | null; }
-interface Props { onSaved: () => void; onClose: () => void; editingQuoteId?: string | null; }
+interface Props { onSaved: () => void; onClose: () => void; editingQuoteId?: string | null; editingLabel?: string | null; }
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -51,7 +51,7 @@ function resolveAddressForJob(
   return Promise.resolve(`${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
 }
 
-export default function SaveToJobModal({ onSaved, onClose, editingQuoteId }: Props) {
+export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editingLabel }: Props) {
   const { user } = useAuth();
   const { profile, incrementEstimates } = useProfile();
   const {
@@ -62,7 +62,7 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId }: Pro
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [newJobName, setNewJobName] = useState('');
-  const [label, setLabel] = useState('Estimate');
+  const [label, setLabel] = useState(editingLabel ?? 'Estimate');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -107,7 +107,7 @@ export default function SaveToJobModal({ onSaved, onClose, editingQuoteId }: Pro
 
     if (editingQuoteId) {
       // UPDATE path — paid users editing an existing quote
-      const { error: quoteErr } = await supabase.from('quotes').update(quotePayload).eq('id', editingQuoteId);
+      const { error: quoteErr } = await supabase.from('quotes').update(quotePayload).eq('id', editingQuoteId).eq('job_id', selectedJobId);
       if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
     } else {
       // INSERT path — new quote

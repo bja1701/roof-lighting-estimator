@@ -129,9 +129,9 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
             <button
               type="button"
               onClick={() => {
-                if (isFreeTier) {
+                if (isFreeTier || estimatorLocked) {
                   setShowUpgradePrompt(true);
-                } else if (!estimatorLocked) {
+                } else {
                   onEdit();
                 }
               }}
