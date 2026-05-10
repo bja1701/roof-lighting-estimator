@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pencil, Trash2, Tag } from 'lucide-react';
+import { Pencil, Trash2, Tag, Lock } from 'lucide-react';
 import { Profile } from '../hooks/useProfile';
 import { isFreeTierEstimatorExhausted } from '../utils/estimatorAccess';
 import { calcDiscountedPrice, discountLabel } from '../utils/discount';
@@ -42,7 +42,9 @@ const inputSm: React.CSSProperties = {
 
 export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onDiscountChange }: Props) {
   const estimatorLocked = isFreeTierEstimatorExhausted(profile);
+  const isFreeTier = profile?.subscription_status === 'free';
 
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [discountEditing, setDiscountEditing] = useState(false);
   const [discountType, setDiscountType] = useState<'percent' | 'flat'>(
     (quote.discount_type as 'percent' | 'flat') ?? 'percent'
@@ -91,6 +93,7 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
   const hasDiscount = currentDiscountAmount != null && discountedPrice < rawPrice;
 
   return (
+    <>
     <div
       className="rounded-xl transition-shadow group"
       style={{
@@ -125,12 +128,17 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               type="button"
-              onClick={onEdit}
-              disabled={estimatorLocked}
-              title={estimatorLocked ? 'Free estimate limit reached (5/5). Upgrade to edit.' : 'Edit in estimator'}
+              onClick={() => {
+                if (isFreeTier) {
+                  setShowUpgradePrompt(true);
+                } else if (!estimatorLocked) {
+                  onEdit();
+                }
+              }}
+              title={isFreeTier ? 'Editing estimates is a paid feature' : estimatorLocked ? 'Free estimate limit reached (5/5). Upgrade to edit.' : 'Edit in estimator'}
               className="p-2 rounded-lg transition-colors"
               style={{ color: 'var(--color-slate)' }}
-              onMouseEnter={e => { if (!estimatorLocked) { e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = 'var(--color-surface)'; } }}
+              onMouseEnter={e => { if (!estimatorLocked && !isFreeTier) { e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = 'var(--color-surface)'; } }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-slate)'; e.currentTarget.style.background = 'transparent'; }}
             >
               <Pencil size={15} />
@@ -302,5 +310,51 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
         </div>
       </div>
     </div>
+
+      {/* Free tier upgrade prompt */}
+      {showUpgradePrompt && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 px-4"
+          style={{ background: 'rgba(31,61,44,0.75)' }}
+          onClick={() => setShowUpgradePrompt(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl p-7 text-center"
+            style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-modal)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'rgba(58,99,73,0.1)', color: 'var(--color-primary)' }}
+            >
+              <Lock size={22} />
+            </div>
+            <h3 className="text-lg font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}>
+              Editing is a paid feature
+            </h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--color-slate)' }}>
+              Upgrade to a paid plan to edit saved estimates. Free accounts can create up to 5 estimates.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUpgradePrompt(false)}
+                className="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+              >
+                Cancel
+              </button>
+              <a
+                href="/settings"
+                className="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all text-center"
+                style={{ background: 'var(--color-accent)', color: '#fff', textDecoration: 'none' }}
+              >
+                Upgrade
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
