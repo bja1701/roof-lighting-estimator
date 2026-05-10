@@ -97,11 +97,11 @@ const SatelliteCanvas: React.FC = () => {
         const latLng = overlayProjection.fromContainerPixelToLatLng(point);
 
         if (latLng) {
+            pushUndo();
             const newNodeId = addNode(latLng.lat(), latLng.lng());
-            
+
             // Auto-connect if we have a previous node
             if (activeDrawNodeId) {
-                pushUndo();
                 addLine(activeDrawNodeId, newNodeId, 'eave');
             }
             setActiveDrawNode(newNodeId);

@@ -194,6 +194,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
           : get().estimateSiteAddress,
       selectedLineId: null,
       activeDrawNodeId: null,
+      undoStack: [],
+      redoStack: [],
+      canUndo: false,
+      canRedo: false,
     });
     get().calculateTotals();
   },
@@ -216,15 +220,19 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
       totalLength2D: 0,
       totalLength3D: 0,
       estimatedCost: 0,
-      activeDrawNodeId: null
+      activeDrawNodeId: null,
+      undoStack: [],
+      redoStack: [],
+      canUndo: false,
+      canRedo: false,
     });
   },
 
   pushUndo: () => {
     const { nodes, lines, undoStack } = get();
     const snapshot: UndoSnapshot = {
-      nodes: [...nodes],
-      lines: [...lines],
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
     };
     const trimmed = undoStack.length >= UNDO_MAX_DEPTH
       ? undoStack.slice(undoStack.length - UNDO_MAX_DEPTH + 1)
@@ -237,7 +245,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     if (undoStack.length === 0) return;
     const snapshot = undoStack[undoStack.length - 1];
     const newUndoStack = undoStack.slice(0, undoStack.length - 1);
-    const currentSnapshot: UndoSnapshot = { nodes: [...nodes], lines: [...lines] };
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
     const newRedoStack = [...redoStack, currentSnapshot];
     set({
       nodes: snapshot.nodes,
@@ -255,7 +266,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     if (redoStack.length === 0) return;
     const snapshot = redoStack[redoStack.length - 1];
     const newRedoStack = redoStack.slice(0, redoStack.length - 1);
-    const currentSnapshot: UndoSnapshot = { nodes: [...nodes], lines: [...lines] };
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
     const newUndoStack = [...undoStack, currentSnapshot];
     set({
       nodes: snapshot.nodes,
