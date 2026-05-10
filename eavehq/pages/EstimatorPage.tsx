@@ -20,6 +20,8 @@ const EstimatorPage: React.FC = () => {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const pitchPaneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,9 +35,11 @@ const EstimatorPage: React.FC = () => {
     const stored = sessionStorage.getItem('restore_quote');
     if (stored) {
       try {
-        const { canvasState, jobId } = JSON.parse(stored);
+        const { canvasState, jobId, quoteId, label } = JSON.parse(stored);
         if (canvasState) restoreCanvas(canvasState);
         if (jobId) setSavedJobId(jobId);
+        if (quoteId) setEditingQuoteId(quoteId);
+        if (label) setEditingLabel(label);
       } catch {}
       sessionStorage.removeItem('restore_quote');
     }
@@ -152,6 +156,8 @@ const EstimatorPage: React.FC = () => {
         <SaveToJobModal
           onSaved={handleSaved}
           onClose={() => setShowSaveModal(false)}
+          editingQuoteId={editingQuoteId}
+          editingLabel={editingLabel}
         />
       )}
     </div>

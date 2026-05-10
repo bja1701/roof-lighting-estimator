@@ -7,7 +7,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
 interface Job { id: string; name: string; address: string | null; }
-interface Props { onSaved: () => void; onClose: () => void; }
+interface Props { onSaved: () => void; onClose: () => void; editingQuoteId?: string | null; editingLabel?: string | null; }
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -51,7 +51,7 @@ function resolveAddressForJob(
   return Promise.resolve(`${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`);
 }
 
-export default function SaveToJobModal({ onSaved, onClose }: Props) {
+export default function SaveToJobModal({ onSaved, onClose, editingQuoteId, editingLabel }: Props) {
   const { user } = useAuth();
   const { profile, incrementEstimates } = useProfile();
   const {
@@ -62,7 +62,7 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [newJobName, setNewJobName] = useState('');
-  const [label, setLabel] = useState('Estimate');
+  const [label, setLabel] = useState(editingLabel ?? 'Estimate');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -97,23 +97,33 @@ export default function SaveToJobModal({ onSaved, onClose }: Props) {
       setError(ensured.error ?? 'Your account profile is still syncing. Refresh and try again.');
       return;
     }
-    let jobId = selectedJobId;
-    if (mode === 'new') {
-      const { data, error: jobErr } = await supabase.from('jobs').insert({ user_id: user.id, name: newJobName.trim() }).select().single();
-      if (jobErr) { setError(jobErr.message); setSubmitting(false); return; }
-      jobId = data.id;
-    }
     const canvasState = { nodes, lines, pricePerFt, controllerFee, includeController, satelliteCenter, estimateSiteAddress };
-    const { error: quoteErr } = await supabase.from('quotes').insert({
-      job_id: jobId, label: label.trim() || 'Estimate', line_items: buildLineItems(),
+    const quotePayload = {
+      label: label.trim() || 'Estimate', line_items: buildLineItems(),
       notes: notes.trim() || null, price_per_foot: pricePerFt, controller_fee: controllerFee,
       include_controller: includeController, total_linear_ft: totalLength3D,
       total_price: estimatedCost, canvas_state: canvasState,
-    });
-    if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
-    const jobAddress = await resolveAddressForJob(estimateSiteAddress, satelliteCenter);
-    await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
-    await incrementEstimates();
+    };
+
+    if (editingQuoteId) {
+      // UPDATE path — paid users editing an existing quote
+      const { error: quoteErr } = await supabase.from('quotes').update(quotePayload).eq('id', editingQuoteId).eq('job_id', selectedJobId);
+      if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
+    } else {
+      // INSERT path — new quote
+      let jobId = selectedJobId;
+      if (mode === 'new') {
+        const { data, error: jobErr } = await supabase.from('jobs').insert({ user_id: user.id, name: newJobName.trim() }).select().single();
+        if (jobErr) { setError(jobErr.message); setSubmitting(false); return; }
+        jobId = data.id;
+      }
+      const { error: quoteErr } = await supabase.from('quotes').insert({ job_id: jobId, ...quotePayload });
+      if (quoteErr) { setError(quoteErr.message); setSubmitting(false); return; }
+      const jobAddress = await resolveAddressForJob(estimateSiteAddress, satelliteCenter);
+      await supabase.from('jobs').update({ address: jobAddress }).eq('id', jobId);
+      await incrementEstimates();
+    }
+
     setSubmitting(false);
     onSaved();
   };
