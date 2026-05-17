@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, memo, useRef } from 'react';
+import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { GoogleMap, StreetViewPanorama } from '@react-google-maps/api';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { LatLng } from '../types/index';
@@ -86,6 +86,10 @@ const VisualPitchTool: React.FC = () => {
   const [slopeAngle, setSlopeAngle] = useState(30);
   const [isDraggingPivot, setIsDraggingPivot] = useState(false);
 
+  // Overlay pan offset (dragging the intersection dot pans both lines)
+  const [overlayOffset, setOverlayOffset] = useState({ x: 0, y: 0 });
+  const dragStartRef = useRef<{ touchX: number; touchY: number; offsetX: number; offsetY: number } | null>(null);
+
   const viewportRef = useRef<HTMLDivElement>(null);
 
   // --- Calculation Logic ---
@@ -95,7 +99,7 @@ const VisualPitchTool: React.FC = () => {
   }
   const calculatedPitch = convertVisualAngleToPitch(diff);
 
-  // --- Interaction Handlers ---
+  // --- Mouse Interaction Handlers (pivot repositions within viewport) ---
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -119,6 +123,36 @@ const VisualPitchTool: React.FC = () => {
   const handleMouseUp = () => {
     setIsDraggingPivot(false);
   };
+
+  // --- Touch Interaction Handlers (pan the entire overlay) ---
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    dragStartRef.current = {
+      touchX: touch.clientX,
+      touchY: touch.clientY,
+      offsetX: overlayOffset.x,
+      offsetY: overlayOffset.y,
+    };
+  }, [overlayOffset]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!dragStartRef.current) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStartRef.current.touchX;
+    const dy = touch.clientY - dragStartRef.current.touchY;
+    setOverlayOffset({
+      x: dragStartRef.current.offsetX + dx,
+      y: dragStartRef.current.offsetY + dy,
+    });
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    dragStartRef.current = null;
+  }, []);
 
   const handleSavePitch = () => {
     const rise = parseInt(calculatedPitch.split('/')[0], 10);
@@ -160,8 +194,11 @@ const VisualPitchTool: React.FC = () => {
       >
         <MemoizedStreetView position={streetViewPosition} />
 
-        {/* 2. X-PROTRACTOR OVERLAY (SVG) */}
-        <svg className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+        {/* 2. X-PROTRACTOR OVERLAY (SVG) — translated by overlayOffset */}
+        <svg
+          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+          style={{ transform: `translate(${overlayOffset.x}px, ${overlayOffset.y}px)` }}
+        >
 
           {/* Line 1: Reference (Yellow, Dashed) */}
           <line
@@ -179,7 +216,7 @@ const VisualPitchTool: React.FC = () => {
             className="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] opacity-90"
           />
 
-          {/* The Pivot (Draggable) */}
+          {/* The Pivot — mouse drag repositions pivot within viewport */}
           <g
             transform={`translate(${pivot.x}, ${pivot.y})`}
             className="cursor-move pointer-events-auto"
@@ -192,7 +229,23 @@ const VisualPitchTool: React.FC = () => {
           </g>
         </svg>
 
-        {/* Result Overlay */}
+        {/* Draggable touch target centered at intersection — pans entire overlay */}
+        <div
+          className="absolute z-20 cursor-move"
+          style={{
+            // Center the 44×44 hit area on the pivot point (accounting for overlay offset)
+            left: pivot.x + overlayOffset.x - 22,
+            top: pivot.y + overlayOffset.y - 22,
+            width: 44,
+            height: 44,
+            touchAction: 'none',
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        />
+
+        {/* Result Overlay — absolute top-right, stays in street view */}
         <div className="absolute right-4 top-4 z-20 min-w-[140px] rounded-lg border border-inverse-on-surface/20 bg-inverse-surface/95 p-3 text-right shadow-2xl backdrop-blur-md">
           <div className="mb-1 text-[10px] uppercase tracking-wider text-inverse-on-surface/55">Measured Pitch</div>
           <div className="font-mono text-3xl font-bold text-inverse-on-surface">{calculatedPitch}</div>
@@ -200,14 +253,14 @@ const VisualPitchTool: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Controls Area (Sliders) — flex-none so it never shrinks off screen */}
-      <div className="relative z-30 flex-none flex flex-col gap-3 border-t border-inverse-on-surface/15 bg-inverse-surface p-3 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
+      {/* 3. Controls Area — flex-none, compact, always visible, target ≤200px tall */}
+      <div className="relative z-30 flex-none flex flex-col gap-2 border-t border-inverse-on-surface/15 bg-inverse-surface p-2 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
 
         {/* Sliders Grid */}
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-2">
 
           {/* Yellow Ref Slider */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             <div className="flex justify-between text-xs font-bold text-yellow-400 uppercase tracking-wide">
               <span>Horizon / Reference</span>
               <span>{refAngle}°</span>
@@ -221,7 +274,7 @@ const VisualPitchTool: React.FC = () => {
           </div>
 
           {/* Red Slope Slider */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             <div className="flex justify-between text-xs font-bold text-red-400 uppercase tracking-wide">
               <span>Roof Slope</span>
               <span>{slopeAngle}°</span>
@@ -247,11 +300,11 @@ const VisualPitchTool: React.FC = () => {
 
         {/* Saved pitches chips */}
         {savedPitches.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1 overflow-y-auto max-h-32">
+          <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-20">
             {savedPitches.map((sp) => (
               <div
                 key={sp.id}
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                 style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}
               >
                 <span>{sp.rise}/{sp.run}</span>
