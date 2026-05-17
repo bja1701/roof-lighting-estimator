@@ -50,39 +50,41 @@ export interface EstimatorState {
   nodes: RoofNode[];
   lines: RoofLine[];
   savedPitches: SavedPitch[];
-  
+
   // Settings / Pricing
   pricePerFt: number;
   controllerFee: number;
   includeController: boolean;
-  
+
   // Geometry / Calculation
   selectedLineId: string | null;
   totalLength2D: number; // Feet
   totalLength3D: number; // Feet
   estimatedCost: number; // Dollars
-  
+
   // Application State
   selectedTool: 'draw' | 'select' | 'zoom' | 'edit';
   visualPitchAngle: number; // Degrees measured in Street View (Tool state)
   isSuperZoom: boolean;
   activeDrawNodeId: string | null; // Tracks the last node added/clicked in draw mode for continuous lines
-  
+
   // Actions
   addNode: (lat: number, lng: number) => string;
   removeNode: (id: string) => void;
   updateNodePosition: (id: string, lat: number, lng: number) => void;
   addLine: (startNodeId: string, endNodeId: string, type?: LineType) => void;
   removeLine: (id: string) => void;
-  
+
   // Selection & Pitch Actions
   selectLine: (id: string | null) => void;
   setActiveDrawNode: (id: string | null) => void;
   updateLinePitch: (id: string, pitch: string) => void;
-  
-  setSelectedTool: (tool: 'draw' | 'select' | 'zoom' | 'edit') => void;
+
+  // Saved Pitches
   addSavedPitch: (rise: number) => void;
   removeSavedPitch: (id: string) => void;
+
+  setSelectedTool: (tool: 'draw' | 'select' | 'zoom' | 'edit') => void;
   setVisualPitchAngle: (angle: number) => void;
   toggleSuperZoom: () => void;
   setPricePerFt: (price: number) => void;

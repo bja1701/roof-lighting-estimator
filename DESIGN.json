@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-29T00:00:00Z",
+  "title": "Design System: EaveHQ",
+  "extensions": {
+    "colorMeta": {
+      "pacific-douglas-fir": {
+        "role": "primary",
+        "displayName": "Pacific Douglas Fir",
+        "canonical": "oklch(40% 0.08 145)",
+        "tonalRamp": ["oklch(18% 0.05 145)", "oklch(24% 0.06 145)", "oklch(30% 0.07 145)", "oklch(40% 0.08 145)", "oklch(52% 0.08 145)", "oklch(63% 0.07 145)", "oklch(76% 0.05 145)", "oklch(90% 0.02 145)"]
+      },
+      "old-growth-canopy": {
+        "role": "primary-dark",
+        "displayName": "Old Growth Canopy",
+        "canonical": "oklch(24% 0.06 145)",
+        "tonalRamp": ["oklch(10% 0.04 145)", "oklch(16% 0.05 145)", "oklch(24% 0.06 145)", "oklch(32% 0.07 145)", "oklch(42% 0.08 145)", "oklch(55% 0.07 145)", "oklch(70% 0.05 145)", "oklch(86% 0.02 145)"]
+      },
+      "ember-copper": {
+        "role": "accent",
+        "displayName": "Ember Copper",
+        "canonical": "oklch(56% 0.16 55)",
+        "tonalRamp": ["oklch(25% 0.10 55)", "oklch(33% 0.12 55)", "oklch(41% 0.14 55)", "oklch(56% 0.16 55)", "oklch(65% 0.14 55)", "oklch(74% 0.12 55)", "oklch(84% 0.08 55)", "oklch(93% 0.04 55)"]
+      },
+      "morning-limestone": {
+        "role": "surface",
+        "displayName": "Morning Limestone",
+        "canonical": "oklch(96% 0.005 80)",
+        "tonalRamp": ["oklch(70% 0.008 80)", "oklch(76% 0.007 80)", "oklch(81% 0.007 80)", "oklch(86% 0.006 80)", "oklch(90% 0.006 80)", "oklch(93% 0.005 80)", "oklch(96% 0.005 80)", "oklch(99% 0.003 80)"]
+      },
+      "worn-edge": {
+        "role": "border",
+        "displayName": "Worn Edge",
+        "canonical": "oklch(88% 0.007 80)",
+        "tonalRamp": ["oklch(55% 0.010 80)", "oklch(63% 0.009 80)", "oklch(70% 0.009 80)", "oklch(77% 0.008 80)", "oklch(83% 0.008 80)", "oklch(88% 0.007 80)", "oklch(93% 0.005 80)", "oklch(97% 0.003 80)"]
+      },
+      "night-work": {
+        "role": "text-primary",
+        "displayName": "Night Work",
+        "canonical": "oklch(14% 0.005 145)",
+        "tonalRamp": ["oklch(8% 0.003 145)", "oklch(14% 0.005 145)", "oklch(22% 0.006 145)", "oklch(32% 0.007 145)", "oklch(44% 0.007 145)", "oklch(58% 0.006 145)", "oklch(73% 0.005 145)", "oklch(88% 0.003 145)"]
+      },
+      "overcast": {
+        "role": "text-secondary",
+        "displayName": "Overcast",
+        "canonical": "oklch(43% 0.02 245)",
+        "tonalRamp": ["oklch(20% 0.015 245)", "oklch(28% 0.017 245)", "oklch(35% 0.018 245)", "oklch(43% 0.020 245)", "oklch(54% 0.018 245)", "oklch(65% 0.016 245)", "oklch(77% 0.012 245)", "oklch(90% 0.007 245)"]
+      },
+      "go-signal": {
+        "role": "success",
+        "displayName": "Go Signal",
+        "canonical": "oklch(60% 0.13 150)",
+        "tonalRamp": ["oklch(28% 0.09 150)", "oklch(36% 0.10 150)", "oklch(44% 0.11 150)", "oklch(53% 0.12 150)", "oklch(60% 0.13 150)", "oklch(70% 0.11 150)", "oklch(81% 0.08 150)", "oklch(92% 0.04 150)"]
+      },
+      "stop-sign": {
+        "role": "destructive",
+        "displayName": "Stop Sign",
+        "canonical": "oklch(48% 0.18 25)",
+        "tonalRamp": ["oklch(22% 0.12 25)", "oklch(30% 0.14 25)", "oklch(38% 0.16 25)", "oklch(48% 0.18 25)", "oklch(58% 0.16 25)", "oklch(68% 0.14 25)", "oklch(80% 0.10 25)", "oklch(92% 0.05 25)"]
+      }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)", "purpose": "Default card lift. Separates without impressing." },
+      { "name": "dropdown", "value": "0 8px 24px rgba(0,0,0,0.12)", "purpose": "Floating menus, autocomplete, date pickers." },
+      { "name": "modal", "value": "0 24px 64px rgba(0,0,0,0.18)", "purpose": "Modal dialogs. Pairs with the dark-green overlay." }
+    ],
+    "motion": [
+      { "name": "ease-default", "value": "150ms ease-out", "purpose": "State changes: color, opacity, border." },
+      { "name": "ease-enter", "value": "200ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Elements entering the viewport: modals, dropdowns, toasts." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one orange action on the screen. CTAs, deposit requests, quote sends.",
+      "html": "<button class=\"ds-btn-primary\">Send Quote</button>",
+      "css": ".ds-btn-primary { background: #d96f0a; color: #ffffff; padding: 10px 20px; border-radius: 6px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.01em; cursor: pointer; transition: background 150ms ease-out, box-shadow 150ms ease-out; } .ds-btn-primary:hover { background: #b85d08; box-shadow: 0 2px 8px rgba(217,111,10,0.3); } .ds-btn-primary:focus-visible { outline: 2px solid #d96f0a; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions. Never competes with primary.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #5a6070; padding: 10px 20px; border-radius: 6px; border: 1px solid #dedad4; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 150ms ease-out, color 150ms ease-out; } .ds-btn-ghost:hover { background: #f5f2ed; color: #1a1a1a; border-color: #c8c4be; } .ds-btn-ghost:focus-visible { outline: 2px solid #3a6349; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "All form fields. Stroke-bordered, focus shifts to primary green.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Client Name</span><input class=\"ds-input\" type=\"text\" placeholder=\"e.g. Chad Peterson\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-field-label { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 600; color: #1a1a1a; letter-spacing: 0.01em; } .ds-input { background: #ffffff; color: #1a1a1a; border: 1px solid #dedad4; border-radius: 6px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; width: 100%; transition: border-color 150ms ease-out; outline: none; } .ds-input::placeholder { color: #5a6070; } .ds-input:focus { border-color: #3a6349; border-width: 2px; padding: 9px 13px; } .ds-input:disabled { background: #f5f2ed; color: #5a6070; border-color: #dedad4; opacity: 0.6; }"
+    },
+    {
+      "name": "Status Chip — Scheduled",
+      "kind": "chip",
+      "refersTo": "status-chip-active",
+      "description": "Job status indicator. Background is a 10% tint of the semantic color.",
+      "html": "<span class=\"ds-chip ds-chip-scheduled\">Scheduled</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; } .ds-chip-scheduled { background: #eaf3ed; color: #3a6349; } .ds-chip-complete { background: #e8f5ee; color: #3d9e6a; } .ds-chip-in-progress { background: #fdf0e6; color: #d96f0a; } .ds-chip-deposit-paid { background: #e8f5ee; color: #3d9e6a; } .ds-chip-estimate-sent { background: #f0f0f2; color: #5a6070; } .ds-chip-archived { background: #f5f2ed; color: #5a6070; }"
+    },
+    {
+      "name": "Job List Item",
+      "kind": "card",
+      "refersTo": "button-ghost",
+      "description": "The primary list unit on the dashboard. Full-width row, not a card grid.",
+      "html": "<div class=\"ds-job-item\"><div class=\"ds-job-main\"><span class=\"ds-job-name\">Chad Peterson — 312 Maple St</span><span class=\"ds-chip ds-chip-scheduled\">Scheduled</span></div><div class=\"ds-job-meta\"><span class=\"ds-job-date\">Apr 29</span><span class=\"ds-job-price\">$3,400</span></div></div>",
+      "css": ".ds-job-item { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; background: #ffffff; border: 1px solid #dedad4; border-radius: 10px; cursor: pointer; transition: border-color 150ms ease-out; } .ds-job-item:hover { border-color: #3a6349; } .ds-job-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; } .ds-job-name { font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; font-weight: 500; color: #1a1a1a; } .ds-job-meta { display: flex; align-items: center; justify-content: space-between; } .ds-job-date { font-family: 'DM Sans', sans-serif; font-size: 0.8125rem; color: #5a6070; } .ds-job-price { font-family: 'Geist Mono', monospace; font-size: 0.875rem; font-weight: 500; color: #1a1a1a; } .ds-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; } .ds-chip-scheduled { background: #eaf3ed; color: #3a6349; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "Desktop sidebar navigation on Old Growth Canopy background.",
+      "html": "<nav class=\"ds-sidebar\"><button class=\"ds-nav-item ds-nav-active\"><svg class=\"ds-nav-icon\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"1.8\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z\"/><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z\"/></svg><span>Dashboard</span></button><button class=\"ds-nav-item\"><svg class=\"ds-nav-icon\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"1.8\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z\"/></svg><span>Clients</span></button></nav>",
+      "css": ".ds-sidebar { background: #1f3d2c; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; } .ds-nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 8px; border: none; background: transparent; color: rgba(255,255,255,0.65); font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; text-align: left; transition: color 150ms ease-out, background 150ms ease-out; } .ds-nav-item:hover { color: #ffffff; } .ds-nav-active { background: #d96f0a; color: #1a1a1a; } .ds-nav-active:hover { color: #1a1a1a; } .ds-nav-icon { width: 18px; height: 18px; flex-shrink: 0; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "button-ghost",
+      "description": "Branded dark-green overlay. No blur. No accent stripe.",
+      "html": "<div class=\"ds-modal-overlay\"><div class=\"ds-modal-card\"><h2 class=\"ds-modal-title\">Add New Job</h2><p class=\"ds-modal-body\">Enter the client address to pull satellite imagery and begin the estimate.</p><div class=\"ds-modal-actions\"><button class=\"ds-btn-ghost\">Cancel</button><button class=\"ds-btn-primary\">Start Estimate</button></div></div></div>",
+      "css": ".ds-modal-overlay { position: fixed; inset: 0; background: rgba(31,61,44,0.75); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; } .ds-modal-card { background: #ffffff; border-radius: 10px; padding: 24px; max-width: 28rem; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.18); } .ds-modal-title { font-family: 'Syne', sans-serif; font-size: 1.125rem; font-weight: 600; color: #1a1a1a; margin: 0 0 8px; letter-spacing: -0.01em; } .ds-modal-body { font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: #5a6070; margin: 0 0 20px; line-height: 1.55; } .ds-modal-actions { display: flex; justify-content: flex-end; gap: 8px; } .ds-btn-primary { background: #d96f0a; color: #ffffff; padding: 10px 20px; border-radius: 6px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; } .ds-btn-ghost { background: transparent; color: #5a6070; padding: 10px 20px; border-radius: 6px; border: 1px solid #dedad4; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Fieldwork Standard",
+    "overview": "EaveHQ is built for people who use their phone between jobs, in truck cabs, in full sun. The design system earns trust through precision, not polish. Every element has a job. Every interaction feels mechanical and deliberate.\n\nThe palette is drawn from the job site itself: forest greens anchored in the Pacific Northwest timber industry, warm stone surfaces that read clearly under sunlight, ember copper reserved for live data and the one tap that matters. Nothing is decorative.\n\nThis system explicitly rejects: generic SaaS blue-gray interfaces, glassmorphism and blurred overlays used decoratively, dashboard hero-metric templates, identical card grids, dark-mode-by-default for its own sake, and anything that requires reading a tooltip to understand what a button does.",
+    "keyCharacteristics": [
+      "Mobile-first: every interactive target is reachable one-handed",
+      "Warm and precise: stone surfaces, forest greens, no clinical white",
+      "Earned density: power users run 15 active jobs; the layout accommodates real data",
+      "Accent scarcity: ember copper appears on CTAs and live numbers only",
+      "Functional typography: Syne for authority, DM Sans for readability, Geist Mono for numbers"
+    ],
+    "rules": [
+      { "name": "The Ember Scarcity Rule", "body": "Ember Copper appears on the one action that matters on any given screen. Never apply it to two interactive elements side-by-side. If it reads like decoration, it has failed.", "section": "colors" },
+      { "name": "The Warm Canvas Rule", "body": "Page backgrounds use Morning Limestone, not white. Cards use Clean Slate. This one-step tonal shift creates depth without shadow and keeps the interface from reading as sterile.", "section": "colors" },
+      { "name": "The Instrument Rule", "body": "Any number that represents money, measurement, or time uses Geist Mono. Body text that happens to contain a digit does not.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only in response to layer level (card vs. modal) or interactive hover state. No element uses a shadow to look important.", "section": "elevation" },
+      { "name": "The No-Blur Rule", "body": "backdrop-filter: blur is prohibited on modal and overlay backgrounds. Blurred overlays are decoration. The dark green semi-transparent backdrop is EaveHQ's modal signature.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Ember Copper on the single most important action per screen.",
+      "Do use Geist Mono for all prices, totals, deposit amounts, and timestamps older than 7 days.",
+      "Do use Morning Limestone as the page background and Clean Slate for card surfaces.",
+      "Do vary spacing deliberately: 8px tight, 16px content, 24-32px section separation.",
+      "Do use Old Growth Canopy as the sidebar shell.",
+      "Do cap body line length at 65-75ch on all prose content.",
+      "Do use the dark panel treatment (rgba(15,25,40,0.92)) for map-overlay elements in the Estimator only."
+    ],
+    "donts": [
+      "Don't use backdrop-filter: blur anywhere outside the Estimator.",
+      "Don't use glassmorphism: no blurred glass cards, no frosted panels outside map context.",
+      "Don't use generic SaaS blue-gray interfaces.",
+      "Don't use hero-metric dashboard templates: big number, small label, gradient accent.",
+      "Don't place an accent-colored horizontal stripe at the top of modal cards.",
+      "Don't use identical card grids.",
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe.",
+      "Don't use gradient text (background-clip: text).",
+      "Don't apply Ember Copper to two interactive elements on the same screen.",
+      "Don't use raw hex or Tailwind color utilities; reference var(--color-*) tokens."
+    ]
+  }
+}

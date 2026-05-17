@@ -4,6 +4,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { EstimatorState, LineType, LatLng, SavedPitch } from '../types/index';
 import { calculateDistance, getMultiplierFromPitch } from '../utils/geometry';
 
+interface UndoSnapshot {
+  nodes: EstimatorState['nodes'];
+  lines: EstimatorState['lines'];
+}
+
 interface ExtendedEstimatorState extends EstimatorState {
   // Decoupled Positions
   satelliteCenter: LatLng;
@@ -11,23 +16,25 @@ interface ExtendedEstimatorState extends EstimatorState {
   /** Human-readable site address from Places search (used when saving a quote → job card / Street View). */
   estimateSiteAddress: string | null;
 
-  // Undo / Redo history (internal, not in EstimatorState base type)
-  _history: { nodes: any[]; lines: any[] }[];
-  _future: { nodes: any[]; lines: any[] }[];
+  // Undo / Redo
+  undoStack: UndoSnapshot[];
+  redoStack: UndoSnapshot[];
   canUndo: boolean;
   canRedo: boolean;
-  pushUndo: () => void;
-  undo: () => void;
-  redo: () => void;
 
   // Actions
-  setMapCenter: (location: LatLng) => void; // Updates Satellite Only (used by Search)
+  setMapCenter: (location: LatLng) => void;
   setStreetViewPosition: (location: LatLng) => void;
   setEstimateSiteAddress: (address: string | null) => void;
   syncStreetViewToSatellite: () => void;
   loadProfilePricing: (pricePerFt: number, controllerFee: number, includeController: boolean) => void;
   restoreCanvas: (canvasState: any) => void;
+  pushUndo: () => void;
+  undo: () => void;
+  redo: () => void;
 }
+
+const UNDO_MAX_DEPTH = 50;
 
 export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   // Initial State
@@ -35,99 +42,32 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   lines: [],
   savedPitches: [],
 
-  // Undo / Redo
-  _history: [],
-  _future: [],
-  canUndo: false,
-  canRedo: false,
-  
   // Navigation State
   // Default: 1568 E 550 S, Springville, UT
-  satelliteCenter: { lat: 40.157588, lng: -111.575344 }, 
+  satelliteCenter: { lat: 40.157588, lng: -111.575344 },
   streetViewPosition: { lat: 40.157588, lng: -111.575344 },
   estimateSiteAddress: null,
+
+  // Undo / Redo
+  undoStack: [],
+  redoStack: [],
+  canUndo: false,
+  canRedo: false,
 
   // Pricing / Domain
   pricePerFt: 25.0,
   controllerFee: 300.0,
   includeController: true,
-  
+
   selectedLineId: null,
 
   totalLength2D: 0,
   totalLength3D: 0,
   estimatedCost: 0,
-  selectedTool: 'select', // Default to Select Mode
+  selectedTool: 'select',
   visualPitchAngle: 26.6, // Default to ~6/12 visual
   isSuperZoom: false,
   activeDrawNodeId: null,
-
-  // --- Undo / Redo ---
-
-  pushUndo: () => {
-    const { nodes, lines } = get();
-    set((state) => ({
-      _history: [...state._history, { nodes: [...nodes], lines: [...lines] }],
-      _future: [],
-      canUndo: true,
-      canRedo: false,
-    }));
-  },
-
-  undo: () => {
-    const { _history, nodes, lines } = get();
-    if (_history.length === 0) return;
-    const prev = _history[_history.length - 1];
-    set((state) => ({
-      nodes: prev.nodes,
-      lines: prev.lines,
-      _history: state._history.slice(0, -1),
-      _future: [{ nodes, lines }, ...state._future],
-      canUndo: state._history.length > 1,
-      canRedo: true,
-      selectedLineId: null,
-      activeDrawNodeId: null,
-    }));
-    get().calculateTotals();
-  },
-
-  redo: () => {
-    const { _future, nodes, lines } = get();
-    if (_future.length === 0) return;
-    const next = _future[0];
-    set((state) => ({
-      nodes: next.nodes,
-      lines: next.lines,
-      _future: state._future.slice(1),
-      _history: [...state._history, { nodes, lines }],
-      canUndo: true,
-      canRedo: state._future.length > 1,
-      selectedLineId: null,
-      activeDrawNodeId: null,
-    }));
-    get().calculateTotals();
-  },
-
-  // --- Pitch Management ---
-
-  addSavedPitch: (rise: number) => {
-    set((state) => {
-      const idx = state.savedPitches.length + 1;
-      const newPitch: SavedPitch = {
-        id: uuidv4(),
-        rise,
-        run: 12,
-        label: `Pitch ${idx}`,
-      };
-      return { savedPitches: [...state.savedPitches, newPitch] };
-    });
-  },
-
-  removeSavedPitch: (id: string) => {
-    set((state) => ({
-      savedPitches: state.savedPitches.filter((p) => p.id !== id),
-    }));
-  },
 
   // --- Navigation Actions ---
 
@@ -168,7 +108,7 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),
       lines: state.lines.filter((l) => l.startNodeId !== id && l.endNodeId !== id),
-      selectedLineId: state.selectedLineId ? null : state.selectedLineId, // Deselect if needed
+      selectedLineId: state.selectedLineId ? null : state.selectedLineId,
       activeDrawNodeId: state.activeDrawNodeId === id ? null : state.activeDrawNodeId
     }));
     get().calculateTotals();
@@ -183,15 +123,12 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
 
     if (existing) return;
 
-    // Default Pitch Logic:
-    // Eaves are typically flat (0/12) for calculation purposes (multiplier 1).
-    // Rakes/Ridges usually follow the roof slope (default 6/12).
     const defaultPitch = type === 'eave' ? "0/12" : "6/12";
 
     const id = uuidv4();
     set((state) => ({
       lines: [...state.lines, { id, startNodeId, endNodeId, type, pitch: defaultPitch }],
-      selectedLineId: id, // Auto-select new line
+      selectedLineId: id,
     }));
     get().calculateTotals();
   },
@@ -219,7 +156,6 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
         line.id === id ? { ...line, pitch: pitch } : line
       )
     }));
-    // Force recalculation immediately after state update
     get().calculateTotals();
   },
 
@@ -228,12 +164,35 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
   setVisualPitchAngle: (angle: number) => {
     set({ visualPitchAngle: angle });
   },
-  
+
   toggleSuperZoom: () => set((state) => ({ isSuperZoom: !state.isSuperZoom })),
 
-  setPitch: (pitch: string) => {
-    // Legacy support
+  setPitch: (_pitch: string) => {
+    // Legacy support — no-op
   },
+
+  // --- Saved Pitches ---
+
+  addSavedPitch: (rise: number) => {
+    set((state) => {
+      const idx = state.savedPitches.length + 1;
+      const newPitch: SavedPitch = {
+        id: uuidv4(),
+        rise,
+        run: 12,
+        label: `Pitch ${idx}`,
+      };
+      return { savedPitches: [...state.savedPitches, newPitch] };
+    });
+  },
+
+  removeSavedPitch: (id: string) => {
+    set((state) => ({
+      savedPitches: state.savedPitches.filter((p) => p.id !== id),
+    }));
+  },
+
+  // --- Pricing ---
 
   loadProfilePricing: (pricePerFt, controllerFee, includeController) => {
     set({ pricePerFt, controllerFee, includeController });
@@ -255,6 +214,10 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
           : get().estimateSiteAddress,
       selectedLineId: null,
       activeDrawNodeId: null,
+      undoStack: [],
+      redoStack: [],
+      canUndo: false,
+      canRedo: false,
     });
     get().calculateTotals();
   },
@@ -278,11 +241,67 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
       totalLength3D: 0,
       estimatedCost: 0,
       activeDrawNodeId: null,
-      _history: [],
-      _future: [],
+      undoStack: [],
+      redoStack: [],
       canUndo: false,
       canRedo: false,
     });
+  },
+
+  // --- Undo / Redo (remote's implementation — deep copy, 50-item cap) ---
+
+  pushUndo: () => {
+    const { nodes, lines, undoStack } = get();
+    const snapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const trimmed = undoStack.length >= UNDO_MAX_DEPTH
+      ? undoStack.slice(undoStack.length - UNDO_MAX_DEPTH + 1)
+      : undoStack;
+    set({ undoStack: [...trimmed, snapshot], redoStack: [], canUndo: true, canRedo: false });
+  },
+
+  undo: () => {
+    const { undoStack, redoStack, nodes, lines } = get();
+    if (undoStack.length === 0) return;
+    const snapshot = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, undoStack.length - 1);
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const newRedoStack = [...redoStack, currentSnapshot];
+    set({
+      nodes: snapshot.nodes,
+      lines: snapshot.lines,
+      undoStack: newUndoStack,
+      redoStack: newRedoStack,
+      canUndo: newUndoStack.length > 0,
+      canRedo: true,
+    });
+    get().calculateTotals();
+  },
+
+  redo: () => {
+    const { undoStack, redoStack, nodes, lines } = get();
+    if (redoStack.length === 0) return;
+    const snapshot = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, redoStack.length - 1);
+    const currentSnapshot: UndoSnapshot = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    const newUndoStack = [...undoStack, currentSnapshot];
+    set({
+      nodes: snapshot.nodes,
+      lines: snapshot.lines,
+      undoStack: newUndoStack,
+      redoStack: newRedoStack,
+      canUndo: true,
+      canRedo: newRedoStack.length > 0,
+    });
+    get().calculateTotals();
   },
 
   calculateTotals: () => {
@@ -299,17 +318,13 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
         const dist = calculateDistance(startNode, endNode);
         total2D += dist;
 
-        // Pitch Multiplier Logic
         let multiplier = 1.0;
-        
         if (line.type === 'eave') {
-          // Eaves run along the horizontal plane, so multiplier is 1.0
           multiplier = 1.0;
         } else {
-          // Rakes, Valleys, Hips, Ridges affected by pitch
           multiplier = getMultiplierFromPitch(line.pitch || "6/12");
         }
-        
+
         total3D += dist * multiplier;
       }
     });

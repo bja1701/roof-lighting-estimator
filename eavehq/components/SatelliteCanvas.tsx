@@ -71,24 +71,16 @@ const SatelliteCanvas: React.FC = () => {
   const rectRef = useRef<DOMRect | null>(null);
 
   // --- Trackpad cursor state (draw + edit modes) ---
-  // Stored in a ref so the native touch handlers always see the latest value.
   const cursorPosRef = useRef<CursorPos>({ x: 0, y: 0 });
-  // Rendered position (drives the visual overlay)
   const [cursorPos, setCursorPos] = useState<CursorPos>({ x: 0, y: 0 });
-  // Whether the cursor has been initialized to the canvas center
   const cursorInitializedRef = useRef(false);
-  // Last touch position (viewport coords) recorded at the start of each touch
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
-  // Touch start time + position for tap detection
   const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  // Total movement accumulated during current touch (used for tap detection)
   const touchMovedRef = useRef(0);
 
   // --- Edit mode state ---
-  // Which node the cursor is locked to (within EDIT_LOCK_RADIUS)
   const nearestEditNodeRef = useRef<string | null>(null);
   const [nearestEditNode, setNearestEditNode] = useState<string | null>(null);
-  // Which node is currently grabbed (being dragged by cursor)
   const grabbedNodeRef = useRef<string | null>(null);
   const [grabbedNode, setGrabbedNode] = useState<string | null>(null);
 
@@ -264,7 +256,6 @@ const SatelliteCanvas: React.FC = () => {
 
     // --- Trackpad cursor mode (draw or edit) ---
     if (selectedTool === 'draw' || selectedTool === 'edit') {
-      // Record where finger landed in viewport coords — movement is relative from here
       lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
       e.preventDefault();
       return;
@@ -338,7 +329,6 @@ const SatelliteCanvas: React.FC = () => {
           updateNodePosition(grabbedNodeRef.current, latLng.lat(), latLng.lng());
         }
       } else if (selectedTool === 'edit') {
-        // Update nearest-node proximity
         updateEditProximity(newPos.x, newPos.y);
       }
       return;
@@ -392,12 +382,10 @@ const SatelliteCanvas: React.FC = () => {
     // --- Edit mode tap: grab/release node ---
     if (selectedTool === 'edit' && isTap) {
       if (grabbedNodeRef.current) {
-        // Release the grabbed node
         grabbedNodeRef.current = null;
         setGrabbedNode(null);
         touchCommittedRef.current = true;
       } else if (nearestEditNodeRef.current) {
-        // Grab the nearest node — pushUndo before grab so we can revert
         pushUndo();
         grabbedNodeRef.current = nearestEditNodeRef.current;
         setGrabbedNode(nearestEditNodeRef.current);
@@ -426,7 +414,7 @@ const SatelliteCanvas: React.FC = () => {
   // Whether to show the trackpad cursor overlay
   const showTrackpadCursor = (selectedTool === 'draw' || selectedTool === 'edit') && isTouchDevice;
 
-  // Cursor visual state: locked to node + grabbed
+  // Cursor visual state
   const cursorLocked = selectedTool === 'edit' && nearestEditNode !== null;
   const cursorGrabbed = selectedTool === 'edit' && grabbedNode !== null;
 
@@ -503,8 +491,7 @@ const SatelliteCanvas: React.FC = () => {
                 fillOpacity: 1,
                 strokeColor: '#1f3d2c',
                 strokeWeight: 1,
-                // BUG 3 fix: scale 4 on touch (was 8) — visible but precise.
-                // The 36px touch target in handleTouchStart covers finger accuracy.
+                // BUG 3 fix: scale 4 on touch (was 8) — precise without losing 36px tap target.
                 scale: isTouchDevice
                   ? 4
                   : selectedTool === 'draw' ? 3 : 2,

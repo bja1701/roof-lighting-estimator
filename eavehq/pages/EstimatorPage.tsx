@@ -92,12 +92,12 @@ const EstimatorPage: React.FC = () => {
       style={{ background: 'var(--color-primary-dark)', color: '#fff', fontFamily: 'var(--font-body)' }}
     >
       <MapWrapper>
-        {/* Header */}
+        {/* Header — responsive: no overflow at 375px */}
         <header
           className="h-14 flex-none flex items-center justify-between gap-2 px-2 sm:px-4 z-50 relative"
           style={{ background: 'var(--color-primary-dark)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
         >
-          {/* Left: back + logo — fixed width, no shrink */}
+          {/* Left: back + logo */}
           <div className="flex items-center gap-1 sm:gap-3 flex-none">
             <button
               onClick={() => navigate('/')}
@@ -130,12 +130,12 @@ const EstimatorPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center: search — takes remaining space, min-w-0 prevents blowout */}
+          {/* Center: search */}
           <div className="flex-1 flex justify-center min-w-0 px-1 sm:px-4">
             <SearchBar />
           </div>
 
-          {/* Right: action buttons — fixed, no shrink, no overflow */}
+          {/* Right: action buttons */}
           <div className="flex items-center gap-1 sm:gap-2 flex-none">
             <button
               onClick={reset}
@@ -217,7 +217,7 @@ const EstimatorPage: React.FC = () => {
         />
       )}
 
-      {/* Pitch assign sheet — appears when a line is selected on mobile */}
+      {/* Pitch assign sheet — appears when a line is selected */}
       <PitchAssignSheet onGoToPitchView={() => setMobileView('pitch')} />
     </div>
   );
