@@ -1,0 +1,544 @@
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api';
+import { useEstimatorStore } from '../store/useEstimatorStore';
+import { getColorForPitch, SELECTED_LINE_COLOR } from '../utils/pitchColors';
+
+// Pixel coordinates of the pending touch-placement indicator (null = not active)
+interface PendingPlacement {
+  x: number; // pixels relative to wrapper
+  y: number;
+}
+
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+};
+
+// Map options
+const mapOptions = {
+  mapTypeId: 'satellite',
+  disableDefaultUI: true,
+  tilt: 0,
+  zoomControl: true,
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: false,
+  gestureHandling: 'greedy',
+  disableDoubleClickZoom: true, // IMPORTANT: Disable DblClick Zoom for interaction
+  draggable: true,
+};
+
+const SatelliteCanvas: React.FC = () => {
+  const {
+    nodes,
+    lines,
+    satelliteCenter,
+    addNode,
+    removeNode,
+    addLine,
+    selectedTool,
+    removeLine,
+    selectedLineId,
+    selectLine,
+    isSuperZoom,
+    activeDrawNodeId,
+    setActiveDrawNode,
+    updateNodePosition,
+    pushUndo,
+  } = useEstimatorStore();
+
+  const [showHelper, setShowHelper] = useState(false);
+
+  // We need the overlay projection to convert pixels (from the div click) to LatLng
+  const [overlayProjection, setOverlayProjection] = useState<any>(null);
+  const mapRef = useRef<any>(null);
+
+  // Touch drag state — for repositioning an already-placed node
+  const capturedNodeId = useRef<string | null>(null);
+
+  // Pending placement — touch-to-place crosshair indicator (draw mode only)
+  const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
+  // Store pending coords in a ref too so the touchend handler can read the latest value
+  // without a stale closure (the native listener is registered once via useEffect).
+  const pendingPlacementRef = useRef<PendingPlacement | null>(null);
+
+  // Wrapper ref for native (non-passive) touch listeners
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Cached bounding rect — refreshed at touchstart from the map div so coordinates
+  // stay accurate near screen edges and don't go stale during a gesture.
+  const rectRef = useRef<DOMRect | null>(null);
+
+  // Detect touch device at mount; switches gestureHandling to 'cooperative' so
+  // normal map pan still works when no node is grabbed.
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+
+  // --- Tool Helper Fade Logic ---
+  useEffect(() => {
+    setShowHelper(true);
+    const timer = setTimeout(() => {
+      setShowHelper(false);
+    }, 1500); // Display for 1.5 seconds
+    return () => clearTimeout(timer);
+  }, [selectedTool]);
+
+  // Track whether the last interaction was a touch-end commit, so we can suppress
+  // the synthetic `click` that browsers fire after touchend (which would double-place).
+  const touchCommittedRef = useRef(false);
+
+  /**
+   * MASTER CLICK HANDLER (Wrapper DIV)
+   * Mouse-only — touch placement goes through handleTouchEnd.
+   * - Draw Mode: Adds Node
+   * - Select Mode: Deselects Line
+   */
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Suppress the ghost click that fires after a touch-end placement.
+    if (touchCommittedRef.current) {
+      touchCommittedRef.current = false;
+      return;
+    }
+
+    // 1. If Zoomed, disable interaction
+    if (isSuperZoom) return;
+
+    // 2. Select Mode Logic: Clicking empty space clears selection
+    if (selectedTool === 'select') {
+        selectLine(null);
+        setActiveDrawNode(null);
+        return;
+    }
+
+    // 3. Draw Mode Logic: Add Node (mouse/desktop only)
+    if (selectedTool === 'draw') {
+        // If we don't have the projection or map, we can't do math.
+        if (!overlayProjection || !mapRef.current) return;
+
+        // Get click coordinates relative to the map container
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Apply the Scale Correction
+        const scaleFactor = isSuperZoom ? 2 : 1;
+        const correctedX = x / scaleFactor;
+        const correctedY = y / scaleFactor;
+
+        // Convert to LatLng
+        const win = window as any;
+        if (!win.google || !win.google.maps) return;
+
+        const point = new win.google.maps.Point(correctedX, correctedY);
+        const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+
+        if (latLng) {
+            pushUndo();
+            const newNodeId = addNode(latLng.lat(), latLng.lng());
+
+            // Auto-connect if we have a previous node
+            if (activeDrawNodeId) {
+                addLine(activeDrawNodeId, newNodeId, 'eave');
+            }
+            setActiveDrawNode(newNodeId);
+        }
+    }
+  };
+
+  /**
+   * LINE INTERACTION HANDLERS
+   */
+
+  // Single Click on Line
+  const handleLineClick = (e: any, lineId: string) => {
+    if (isSuperZoom) return;
+
+    // Select Mode: Single click does nothing BUT blocks the map click (which would deselect)
+    if (selectedTool === 'select') {
+        if (e.domEvent) e.domEvent.stopPropagation();
+        return;
+    }
+
+    // Draw Mode: Pass through (handled by clickable={false} prop below)
+  };
+
+  // Double Click on Line
+  const handleLineDblClick = (e: any, lineId: string) => {
+    if (selectedTool === 'select') {
+        selectLine(lineId);
+        // Stop bubbling so the map doesn't zoom (already disabled) or deselect
+        if (e.domEvent) e.domEvent.stopPropagation();
+    }
+  };
+
+  // Node Drag End (for repositioning in Select Mode)
+  const handleNodeDragEnd = (e: any, nodeId: string) => {
+    if (e.latLng) {
+      pushUndo();
+      updateNodePosition(nodeId, e.latLng.lat(), e.latLng.lng());
+    }
+  };
+
+  // Node Click (for connecting lines in Draw Mode)
+  const handleNodeClick = (e: any, nodeId: string) => {
+    if (e.stop) e.stop();
+    if (isSuperZoom) return;
+
+    // Only allow linking in Draw mode
+    if (selectedTool === 'draw') {
+        if (activeDrawNodeId && activeDrawNodeId !== nodeId) {
+            addLine(activeDrawNodeId, nodeId, 'eave');
+            setActiveDrawNode(nodeId);
+        } else {
+            setActiveDrawNode(nodeId);
+        }
+    }
+  };
+
+
+  // --- Touch Drag Handlers ---
+
+  // B3: isSuperZoom guard added as first line in both handlers.
+  // B2: useCallback makes these stable references for the useEffect dependency array.
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Refresh bounding rect at the start of every gesture from the map div — this gives
+    // accurate coords near screen edges and avoids stale values after scroll/resize.
+    const mapDiv = (mapRef.current as any)?.getDiv?.() as HTMLElement | undefined;
+    rectRef.current = mapDiv?.getBoundingClientRect()
+      ?? wrapperRef.current?.getBoundingClientRect()
+      ?? null;
+
+    if (isSuperZoom) return;
+
+    // Two-finger gesture = pinch/pan — never intercept, let the map handle it.
+    if (e.touches.length > 1) return;
+
+    if (!overlayProjection) return;
+    const touch = e.touches[0];
+    if (!rectRef.current) return;
+    const rect = rectRef.current;
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+
+    // --- Check whether the touch landed on an existing node (larger 36px touch target) ---
+    let closestId: string | null = null;
+    let closestDist = Infinity;
+    for (const node of nodes) {
+      const nodePoint = overlayProjection.fromLatLngToContainerPixel(
+        new win.google.maps.LatLng(node.lat, node.lng)
+      );
+      if (!nodePoint) continue;
+      const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
+      // 36px touch target radius (visually the circle is smaller, but finger needs room)
+      if (dist < 36 && dist < closestDist) {
+        closestDist = dist;
+        closestId = node.id;
+      }
+    }
+
+    if (closestId) {
+      // Drag an existing node — same as before
+      capturedNodeId.current = closestId;
+      pushUndo();
+      e.preventDefault();
+      return;
+    }
+
+    // --- Draw mode: start a pending placement indicator ---
+    if (selectedTool === 'draw') {
+      const placement = { x, y };
+      pendingPlacementRef.current = placement;
+      setPendingPlacement(placement);
+      e.preventDefault(); // prevent map pan while the indicator is live
+    }
+    // Select mode with no node hit: let the map pan proceed (do nothing).
+  }, [isSuperZoom, overlayProjection, nodes, pushUndo, selectedTool]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (isSuperZoom) return;
+    if (e.touches.length > 1) return; // pinch in progress — don't interfere
+
+    if (!rectRef.current) return;
+    const touch = e.touches[0];
+    const rect = rectRef.current;
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return;
+
+    if (capturedNodeId.current && overlayProjection) {
+      // Dragging an existing node — apply SuperZoom scale correction
+      e.preventDefault();
+      const scaleFactor = isSuperZoom ? 2 : 1;
+      const correctedX = x / scaleFactor;
+      const correctedY = y / scaleFactor;
+      const point = new win.google.maps.Point(correctedX, correctedY);
+      const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+      if (latLng) {
+        updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+      }
+      return;
+    }
+
+    if (pendingPlacementRef.current !== null) {
+      // Dragging the pending placement indicator to fine-tune position
+      e.preventDefault();
+      const placement = { x, y };
+      pendingPlacementRef.current = placement;
+      setPendingPlacement(placement);
+    }
+  }, [isSuperZoom, overlayProjection, updateNodePosition]);
+
+  // Attach touchstart/touchmove as native { passive: false } listeners so
+  // e.preventDefault() actually works. React synthetic touch events at the
+  // document root are passive on Chrome/Safari, making preventDefault() a no-op.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [handleTouchStart, handleTouchMove]);
+
+  const handleTouchEnd = useCallback((_e: React.TouchEvent<HTMLDivElement>) => {
+    // Commit a pending placement: convert final pixel position → LatLng → addNode
+    // Apply SuperZoom scale correction so placement is accurate at 2× scale.
+    if (pendingPlacementRef.current !== null && overlayProjection) {
+      const { x, y } = pendingPlacementRef.current;
+      const win = window as any;
+      if (win.google && win.google.maps) {
+        const scaleFactor = isSuperZoom ? 2 : 1;
+        const correctedX = x / scaleFactor;
+        const correctedY = y / scaleFactor;
+        const point = new win.google.maps.Point(correctedX, correctedY);
+        const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+        if (latLng) {
+          pushUndo();
+          const newNodeId = addNode(latLng.lat(), latLng.lng());
+          if (activeDrawNodeId) {
+            addLine(activeDrawNodeId, newNodeId, 'eave');
+          }
+          setActiveDrawNode(newNodeId);
+          // Flag so the ghost `click` event fired by the browser after touchend
+          // does not trigger handleCanvasClick and double-place a node.
+          touchCommittedRef.current = true;
+        }
+      }
+      pendingPlacementRef.current = null;
+      setPendingPlacement(null);
+    }
+
+    capturedNodeId.current = null;
+  }, [overlayProjection, isSuperZoom, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
+
+  const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
+
+  // Determine Cursor Style
+  let cursorClass = '';
+  if (isSuperZoom) {
+    cursorClass = 'cursor-zoom-out';
+  } else if (selectedTool === 'draw') {
+    cursorClass = 'cursor-crosshair';
+  } else {
+    cursorClass = 'cursor-default';
+  }
+
+  return (
+    <div className="relative w-full h-full overflow-hidden group" style={{ background: 'rgba(15,25,40,0.98)' }}>
+
+      {/*
+         The Transform Wrapper
+      */}
+      <div
+        ref={wrapperRef}
+        className={`w-full h-full transition-transform duration-300 origin-center ${
+            isSuperZoom ? 'scale-[2]' : 'scale-100'
+        } ${cursorClass}`}
+        onClick={handleCanvasClick}
+        onTouchEnd={handleTouchEnd}
+      >
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={activeCenter}
+          zoom={20}
+          options={{
+            ...mapOptions,
+            gestureHandling: isTouchDevice ? 'cooperative' : 'greedy',
+            draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'),
+          }}
+          onLoad={(map) => { mapRef.current = map; }}
+        >
+          {/* Projection Helper */}
+          <OverlayView
+            position={activeCenter}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            onLoad={(overlay) => setOverlayProjection(overlay.getProjection())}
+          >
+            <div />
+          </OverlayView>
+
+          {/* Render Lines */}
+          {lines.map((line) => {
+            const start = nodes.find(n => n.id === line.startNodeId);
+            const end = nodes.find(n => n.id === line.endNodeId);
+            if (!start || !end) return null;
+
+            const isSelected = selectedLineId === line.id;
+            const strokeColor = isSelected ? SELECTED_LINE_COLOR : getColorForPitch(line.pitch);
+
+            // Interaction Props based on Tool
+            const isClickable = selectedTool !== 'draw'; // In Draw mode, lines are ghosts
+
+            return (
+              <Polyline
+                key={line.id}
+                path={[start, end]}
+                onClick={(e) => handleLineClick(e, line.id)}
+                onDblClick={(e) => handleLineDblClick(e, line.id)}
+                options={{
+                  strokeColor: strokeColor,
+                  strokeOpacity: 1.0,
+                  strokeWeight: isSelected ? 6 : 4,
+                  zIndex: isSelected ? 100 : 1,
+                  clickable: isClickable,
+                }}
+              />
+            );
+          })}
+
+          {/* Render Nodes */}
+          {nodes.map((node) => (
+            <Marker
+              key={node.id}
+              position={node}
+              onClick={(e) => handleNodeClick(e, node.id)}
+              draggable={selectedTool === 'select'} // Drag to reposition in select mode
+              onDragEnd={(e) => handleNodeDragEnd(e, node.id)}
+              icon={{
+                path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
+                fillColor: activeDrawNodeId === node.id ? '#3a6349' : '#f7f3ea',
+                fillOpacity: 1,
+                strokeColor: '#1f3d2c',
+                strokeWeight: 1,
+                // On touch devices use scale 8 so the visual circle is large enough
+                // to see AND the Google Maps hit target is wide enough for fingers.
+                // On desktop keep the existing compact sizes.
+                scale: isTouchDevice
+                  ? 8
+                  : selectedTool === 'draw' ? 3 : 2,
+              }}
+              clickable={selectedTool === 'draw' || selectedTool === 'select'}
+              cursor={selectedTool === 'draw' ? 'crosshair' : 'grab'}
+            />
+          ))}
+        </GoogleMap>
+      </div>
+
+      {/* Touch placement crosshair — follows finger, committed on touchend */}
+      {pendingPlacement && (
+        <div
+          className="absolute pointer-events-none z-50"
+          style={{
+            left: pendingPlacement.x,
+            top: pendingPlacement.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {/* Outer ring — large so the finger doesn't obscure the target */}
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              border: '2px solid rgba(247,243,234,0.7)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Inner dot */}
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#f7f3ea',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Horizontal arm */}
+          <div
+            style={{
+              width: 40,
+              height: 1,
+              background: 'rgba(247,243,234,0.8)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Vertical arm */}
+          <div
+            style={{
+              width: 1,
+              height: 40,
+              background: 'rgba(247,243,234,0.8)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        </div>
+      )}
+
+      {/* Centered Helper Notification */}
+      <div
+        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none transition-opacity duration-500 ease-out ${
+          showHelper ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        {selectedTool === 'select' && (
+          <div
+            className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+            style={{
+              background: 'rgba(15,25,40,0.92)',
+              border: '1px solid rgba(217,111,10,0.35)',
+              color: 'var(--color-accent)',
+            }}
+          >
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
+             <span>Double-click lines to select</span>
+          </div>
+        )}
+        {selectedTool === 'draw' && (
+           <div
+             className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+             style={{
+               background: 'rgba(15,25,40,0.92)',
+               border: '1px solid rgba(58,99,73,0.42)',
+               color: '#d9e8de',
+             }}
+           >
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+             <span>Click map to add points</span>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+};
+
+export default SatelliteCanvas;
