@@ -165,7 +165,7 @@ const VisualPitchTool: React.FC = () => {
       {/* 1. The Stable Street View Layer */}
       <div
         ref={viewportRef}
-        className="relative flex-1 w-full overflow-hidden"
+        className="relative flex-1 min-h-0 w-full overflow-hidden"
       >
         <MemoizedStreetView position={streetViewPosition} />
 
@@ -209,8 +209,8 @@ const VisualPitchTool: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Controls Area (Sliders) */}
-      <div className="relative z-30 flex h-auto flex-col gap-4 border-t border-inverse-on-surface/15 bg-inverse-surface p-4 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
+      {/* 3. Controls Area (Sliders) — flex-none so it never shrinks off screen */}
+      <div className="relative z-30 flex-none flex flex-col gap-4 border-t border-inverse-on-surface/15 bg-inverse-surface p-4 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
 
         {/* Sliders Grid */}
         <div className="grid grid-cols-1 gap-4">
@@ -282,7 +282,7 @@ const VisualPitchTool: React.FC = () => {
 
         {/* Saved pitches chips */}
         {savedPitches.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1 overflow-y-auto max-h-32">
             {savedPitches.map((sp) => (
               <div
                 key={sp.id}

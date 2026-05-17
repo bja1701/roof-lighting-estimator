@@ -128,7 +128,6 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     const id = uuidv4();
     set((state) => ({
       lines: [...state.lines, { id, startNodeId, endNodeId, type, pitch: defaultPitch }],
-      selectedLineId: id,
     }));
     get().calculateTotals();
   },

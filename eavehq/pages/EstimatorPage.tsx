@@ -27,6 +27,7 @@ const EstimatorPage: React.FC = () => {
   // On lg+ both panels are always visible side-by-side.
   const [mobileView, setMobileView] = useState<'satellite' | 'pitch'>('satellite');
   const pitchPaneRef = useRef<HTMLDivElement>(null);
+  // pitchPaneRef kept for layout ref; PricingPanel no longer uses dockRef
 
   useEffect(() => {
     if (profile) {
@@ -170,21 +171,26 @@ const EstimatorPage: React.FC = () => {
           <div className="w-full h-full flex flex-col lg:flex-row">
             {/* Satellite canvas panel */}
             <div
-              className={`order-1 group relative min-w-[300px] lg:flex-1 ${
+              className={`order-1 group relative min-w-[300px] lg:flex-1 flex flex-col ${
                 mobileView === 'pitch' ? 'hidden lg:flex lg:flex-col' : ''
               } h-[calc(100dvh-3.5rem)] lg:h-auto`}
               style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
             >
-              <SatelliteCanvas />
-              <EditorToolbar />
-              {/* Mobile toggle button — tap to switch to pitch/pricing panel */}
-              <button
-                className="absolute top-2 right-2 z-50 lg:hidden rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
-                style={{ background: 'rgba(255,255,255,0.9)', color: '#111', backdropFilter: 'blur(4px)', border: '1px solid rgba(0,0,0,0.12)' }}
-                onClick={() => setMobileView('pitch')}
-              >
-                Pitch View
-              </button>
+              {/* Canvas fills remaining space */}
+              <div className="flex-1 min-h-0 relative">
+                <SatelliteCanvas />
+                <EditorToolbar />
+                {/* Mobile toggle button — tap to switch to pitch/pricing panel */}
+                <button
+                  className="absolute top-2 right-2 z-50 lg:hidden rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                  style={{ background: 'rgba(255,255,255,0.9)', color: '#111', backdropFilter: 'blur(4px)', border: '1px solid rgba(0,0,0,0.12)' }}
+                  onClick={() => setMobileView('pitch')}
+                >
+                  Pitch View
+                </button>
+              </div>
+              {/* Pinned pricing bar — always visible at bottom of satellite panel */}
+              <PricingPanel />
             </div>
 
             {/* Pitch / pricing panel */}
@@ -196,7 +202,6 @@ const EstimatorPage: React.FC = () => {
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
             >
               <VisualPitchTool />
-              <PricingPanel dockRef={pitchPaneRef} />
               {/* Mobile back button */}
               <button
                 className="absolute top-2 left-2 z-50 lg:hidden rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"

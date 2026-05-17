@@ -15,7 +15,7 @@ const containerStyle = {
   height: '100%',
 };
 
-// Map options
+// Map options (gesture/draggable are set dynamically per tool — see JSX)
 const mapOptions = {
   mapTypeId: 'satellite',
   disableDefaultUI: true,
@@ -24,15 +24,15 @@ const mapOptions = {
   streetViewControl: false,
   mapTypeControl: false,
   fullscreenControl: false,
-  gestureHandling: 'greedy',
   disableDoubleClickZoom: true,
-  draggable: true,
 };
 
 // How far (canvas px) the cursor must be from a node to "lock" in edit mode
 const EDIT_LOCK_RADIUS = 20;
 // Sensitivity multiplier for trackpad-style cursor movement (1.0 = 1:1)
 const CURSOR_SENSITIVITY = 1.0;
+// Additional sensitivity reduction for edit mode — cursor moves at 30% of finger speed
+const TRACKPAD_SENSITIVITY = 0.3;
 // Max movement (px) + max duration (ms) for a tap to be considered a "click"
 const TAP_MAX_MOVE = 8;
 const TAP_MAX_MS = 200;
@@ -308,8 +308,9 @@ const SatelliteCanvas: React.FC = () => {
     // --- Trackpad cursor mode ---
     if ((selectedTool === 'draw' || selectedTool === 'edit') && lastTouchRef.current) {
       e.preventDefault();
-      const dx = (touch.clientX - lastTouchRef.current.x) * CURSOR_SENSITIVITY;
-      const dy = (touch.clientY - lastTouchRef.current.y) * CURSOR_SENSITIVITY;
+      const sensitivityMultiplier = selectedTool === 'edit' ? TRACKPAD_SENSITIVITY : CURSOR_SENSITIVITY;
+      const dx = (touch.clientX - lastTouchRef.current.x) * sensitivityMultiplier;
+      const dy = (touch.clientY - lastTouchRef.current.y) * sensitivityMultiplier;
       lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
 
       const el = wrapperRef.current;
@@ -399,7 +400,8 @@ const SatelliteCanvas: React.FC = () => {
     touchStartRef.current = null;
   }, [selectedTool, overlayProjection, canvasPxToLatLng, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
 
-  const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
+  // Always use the job address center — never chase the last placed node.
+  const activeCenter = satelliteCenter;
 
   // Cursor style for the wrapper div
   let cursorClass = '';
@@ -436,7 +438,10 @@ const SatelliteCanvas: React.FC = () => {
           zoom={20}
           options={{
             ...mapOptions,
-            gestureHandling: isTouchDevice ? 'cooperative' : 'greedy',
+            gestureHandling: (selectedTool === 'draw' || selectedTool === 'edit')
+              ? 'none'
+              : (isTouchDevice ? 'cooperative' : 'greedy'),
+            draggable: selectedTool !== 'draw' && selectedTool !== 'edit',
             draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'),
           }}
           onLoad={(map) => { mapRef.current = map; }}
