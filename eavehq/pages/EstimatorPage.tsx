@@ -56,6 +56,11 @@ const EstimatorPage: React.FC = () => {
   }, [undo, redo]);
 
   useEffect(() => {
+    // Always start with a blank canvas. This prevents traces from a previous
+    // job bleeding into the current job when the store (a Zustand singleton)
+    // still holds the last session's nodes/lines.
+    reset();
+
     const stored = sessionStorage.getItem('restore_quote');
     if (stored) {
       try {
