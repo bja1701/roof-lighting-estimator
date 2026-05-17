@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { calcDiscountedPrice, discountLabel } from '../utils/discount';
+import { calcDiscountedPrice } from '../utils/discount';
 
 interface LineItem {
   id: string;
@@ -219,22 +219,23 @@ export default function InvoicePage() {
                         </h2>
                       </div>
                       <div className="text-right">
-                        {hasDiscount && (
-                          <p className="text-sm line-through" style={{ color: 'var(--color-slate)', fontFamily: 'var(--font-mono)' }}>
-                            ${rawPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        )}
-                        <p className="text-2xl font-black" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-                          ${effectivePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        {hasDiscount && quote.discount_amount != null && quote.discount_type != null && (
-                          <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-success)' }}>
-                            {discountLabel(quote.discount_amount, quote.discount_type, rawPrice)}
-                          </p>
-                        )}
-                        {quote.discount_note && (
-                          <p className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>
-                            {quote.discount_note}
+                        {hasDiscount ? (
+                          <>
+                            <p className="text-sm" style={{ color: 'var(--color-slate)', fontFamily: 'var(--font-mono)' }}>
+                              Subtotal: ${rawPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-sm mt-0.5" style={{ color: 'var(--color-destructive)', fontFamily: 'var(--font-mono)' }}>
+                              Discount{quote.discount_note ? `: ${quote.discount_note}` : ''}
+                              {' '}
+                              &minus;${(rawPrice - effectivePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-2xl font-black mt-1" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+                              ${effectivePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-2xl font-black" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+                            ${effectivePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         )}
                       </div>

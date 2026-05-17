@@ -18,6 +18,7 @@ interface Quote {
   created_at: string;
   discount_amount?: number | null;
   discount_type?: string | null;
+  discount_note?: string | null;
 }
 
 interface Props {
@@ -26,7 +27,7 @@ interface Props {
   jobId: string;
   onDelete: () => void;
   onEdit: () => void;
-  onDiscountChange?: (quoteId: string, discountAmount: number | null, discountType: string | null) => void;
+  onDiscountChange?: (quoteId: string, discountAmount: number | null, discountType: string | null, discountNote: string | null) => void;
 }
 
 const inputSm: React.CSSProperties = {
@@ -52,6 +53,7 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
   const [discountValue, setDiscountValue] = useState<string>(
     quote.discount_amount != null ? String(quote.discount_amount) : ''
   );
+  const [discountNote, setDiscountNote] = useState<string>(quote.discount_note ?? '');
   const [applyToAll, setApplyToAll] = useState(false);
   const [discountSaving, setDiscountSaving] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
@@ -70,13 +72,23 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
       setDiscountSaving(false);
       return;
     }
-    const updates = { discount_amount: parsed, discount_type: parsed != null ? discountType : null };
+    if (parsed != null && discountType === 'flat' && parsed > rawPrice) {
+      setDiscountError('Flat discount cannot exceed the total price.');
+      setDiscountSaving(false);
+      return;
+    }
+    const noteValue = discountNote.trim() || null;
+    const updates = {
+      discount_amount: parsed,
+      discount_type: parsed != null ? discountType : null,
+      discount_note: parsed != null ? noteValue : null,
+    };
     const { error } = await supabase.from('quotes').update(updates).eq('id', quote.id);
     if (error) { setDiscountError(error.message); setDiscountSaving(false); return; }
     if (applyToAll && parsed != null) {
       await supabase.from('quotes').update(updates).eq('job_id', jobId).neq('id', quote.id);
     }
-    onDiscountChange?.(quote.id, parsed, parsed != null ? discountType : null);
+    onDiscountChange?.(quote.id, parsed, parsed != null ? discountType : null, parsed != null ? noteValue : null);
     setDiscountEditing(false);
     setDiscountSaving(false);
   };
@@ -213,6 +225,13 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
                   </button>
                 )}
               </div>
+              <input
+                type="text"
+                value={discountNote}
+                onChange={e => setDiscountNote(e.target.value)}
+                placeholder="Memo (e.g. Returning customer discount)"
+                style={{ ...inputSm, width: '100%' }}
+              />
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -250,19 +269,26 @@ export default function QuoteCard({ quote, profile, jobId, onDelete, onEdit, onD
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setDiscountEditing(true)}
-              className="flex items-center gap-1.5 text-xs transition-colors"
-              style={{ color: hasDiscount ? 'var(--color-success)' : 'var(--color-slate)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-primary)')}
-              onMouseLeave={e => (e.currentTarget.style.color = hasDiscount ? 'var(--color-success)' : 'var(--color-slate)')}
-            >
-              <Tag size={13} />
-              {hasDiscount && currentDiscountAmount != null && currentDiscountType != null
-                ? discountLabel(currentDiscountAmount, currentDiscountType, rawPrice)
-                : 'Add discount'}
-            </button>
+            <div className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => setDiscountEditing(true)}
+                className="flex items-center gap-1.5 text-xs transition-colors"
+                style={{ color: hasDiscount ? 'var(--color-success)' : 'var(--color-slate)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-primary)')}
+                onMouseLeave={e => (e.currentTarget.style.color = hasDiscount ? 'var(--color-success)' : 'var(--color-slate)')}
+              >
+                <Tag size={13} />
+                {hasDiscount && currentDiscountAmount != null && currentDiscountType != null
+                  ? discountLabel(currentDiscountAmount, currentDiscountType, rawPrice)
+                  : 'Add discount'}
+              </button>
+              {hasDiscount && quote.discount_note && (
+                <p className="text-xs pl-[22px]" style={{ color: 'var(--color-slate)' }}>
+                  {quote.discount_note}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

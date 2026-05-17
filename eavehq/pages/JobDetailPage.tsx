@@ -46,6 +46,7 @@ interface Quote {
   created_at: string;
   discount_amount: number | null;
   discount_type: string | null;
+  discount_note: string | null;
 }
 
 interface ConfirmDialog {
@@ -655,8 +656,8 @@ export default function JobDetailPage() {
                 jobId={id!}
                 onDelete={() => handleDeleteQuote(quote.id, quote.label)}
                 onEdit={() => handleOpenEstimator(quote)}
-                onDiscountChange={(qId, amount, type) =>
-                  setQuotes(qs => qs.map(q => q.id === qId ? { ...q, discount_amount: amount, discount_type: type } : q))
+                onDiscountChange={(qId, amount, type, note) =>
+                  setQuotes(qs => qs.map(q => q.id === qId ? { ...q, discount_amount: amount, discount_type: type, discount_note: note ?? null } : q))
                 }
               />
             ))}
