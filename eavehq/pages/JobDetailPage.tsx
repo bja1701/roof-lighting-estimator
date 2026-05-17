@@ -81,6 +81,10 @@ export default function JobDetailPage() {
   const [sendOptionsSending, setSendOptionsSending]     = useState(false);
   const [sendOptionsError, setSendOptionsError]         = useState<string | null>(null);
 
+  // Prerequisite block modal (Task C + D)
+  const [prereqBlockOpen, setPrereqBlockOpen]           = useState(false);
+  const [prereqBlockMessage, setPrereqBlockMessage]     = useState('');
+
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
   // Schedule date modal
@@ -139,6 +143,23 @@ export default function JobDetailPage() {
   };
 
   const handleOpenSendOptions = () => {
+    // Task C: block if Stripe not connected
+    if (!profile?.stripe_connect_enabled) {
+      setPrereqBlockMessage('stripe');
+      setPrereqBlockOpen(true);
+      return;
+    }
+    // Task D: block if business name or logo missing
+    if (!profile?.company_name?.trim()) {
+      setPrereqBlockMessage('name');
+      setPrereqBlockOpen(true);
+      return;
+    }
+    if (!profile?.logo_url?.trim()) {
+      setPrereqBlockMessage('logo');
+      setPrereqBlockOpen(true);
+      return;
+    }
     setSendOptionsDepositPct(String(job?.deposit_percent ?? 50));
     setSendOptionsError(null);
     setSendOptionsOpen(true);
@@ -719,6 +740,69 @@ export default function JobDetailPage() {
               >
                 {scheduleDateSaving ? <><Loader2 size={15} className="animate-spin" /> Saving…</> : 'Confirm'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prerequisite block modal (Task C: Stripe, Task D: name/logo) */}
+      {prereqBlockOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+          style={{ background: 'rgba(31,61,44,0.75)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prereq-block-title"
+          onClick={e => e.target === e.currentTarget && setPrereqBlockOpen(false)}
+        >
+          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(201,64,64,0.1)' }}>
+                <AlertTriangle size={18} style={{ color: 'var(--color-destructive)' }} />
+              </div>
+              <h2
+                id="prereq-block-title"
+                className="text-base font-bold"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
+              >
+                Setup required
+              </h2>
+            </div>
+
+            {prereqBlockMessage === 'stripe' && (
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--color-slate)' }}>
+                Connect your Stripe account before sending quotes. Clients won't be able to pay until Stripe is set up.
+              </p>
+            )}
+            {prereqBlockMessage === 'name' && (
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--color-slate)' }}>
+                Add your <strong style={{ color: 'var(--color-ink)' }}>business name</strong> in Settings before sending the client portal. Clients see your business name on every quote.
+              </p>
+            )}
+            {prereqBlockMessage === 'logo' && (
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--color-slate)' }}>
+                Upload your <strong style={{ color: 'var(--color-ink)' }}>business logo</strong> in Settings before sending the client portal. Clients see your logo on every quote.
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPrereqBlockOpen(false)}
+                className="flex-1 rounded-lg py-2.5 text-sm font-medium"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
+              >
+                Cancel
+              </button>
+              <a
+                href="/settings"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold"
+                style={{ background: 'var(--color-primary)', color: '#fff', textDecoration: 'none' }}
+                onClick={() => setPrereqBlockOpen(false)}
+              >
+                Go to Settings
+                <ArrowRight size={14} />
+              </a>
             </div>
           </div>
         </div>

@@ -107,11 +107,33 @@ serve(async (req) => {
     // 5. Fetch contractor profile
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('full_name, company_name')
+      .select('full_name, company_name, logo_url, stripe_connect_enabled')
       .eq('id', user.id)
       .single();
 
-    const companyName = profile?.company_name ?? profile?.full_name ?? 'Your contractor';
+    // Task C: block send if Stripe Connect not enabled
+    if (!profile?.stripe_connect_enabled) {
+      return new Response(
+        JSON.stringify({ error: 'stripe_not_connected', message: 'Connect your Stripe account before sending quotes.' }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Task D: block send if business name or logo missing
+    if (!profile?.company_name?.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'missing_business_name', message: 'Add your business name in Settings before sending the client portal.' }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    if (!profile?.logo_url?.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'missing_logo', message: 'Upload your business logo in Settings before sending the client portal.' }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const companyName = profile.company_name ?? profile.full_name ?? 'Your contractor';
 
     // 6. Skip gracefully if no client email
     if (!job.client_email) {
