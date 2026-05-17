@@ -438,9 +438,7 @@ const SatelliteCanvas: React.FC = () => {
           zoom={20}
           options={{
             ...mapOptions,
-            gestureHandling: (selectedTool === 'draw' || selectedTool === 'edit')
-              ? 'none'
-              : (isTouchDevice ? 'cooperative' : 'greedy'),
+            gestureHandling: (selectedTool === 'draw' || selectedTool === 'edit') ? 'none' : 'greedy',
             draggable: selectedTool !== 'draw' && selectedTool !== 'edit',
             draggableCursor: isSuperZoom ? 'not-allowed' : (selectedTool === 'draw' ? 'crosshair' : 'default'),
           }}

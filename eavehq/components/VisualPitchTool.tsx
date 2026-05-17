@@ -76,9 +76,6 @@ MemoizedStreetView.displayName = 'MemoizedStreetView';
 const VisualPitchTool: React.FC = () => {
   // Store Access
   const streetViewPosition = useEstimatorStore((state) => state.streetViewPosition);
-  const selectedLineId = useEstimatorStore((state) => state.selectedLineId);
-  const selectedLine = useEstimatorStore((state) => state.lines.find(l => l.id === selectedLineId));
-  const updateLinePitch = useEstimatorStore((state) => state.updateLinePitch);
   const savedPitches = useEstimatorStore((state) => state.savedPitches);
   const addSavedPitch = useEstimatorStore((state) => state.addSavedPitch);
   const removeSavedPitch = useEstimatorStore((state) => state.removeSavedPitch);
@@ -121,12 +118,6 @@ const VisualPitchTool: React.FC = () => {
 
   const handleMouseUp = () => {
     setIsDraggingPivot(false);
-  };
-
-  const handleApplyPitch = () => {
-    if (selectedLineId && calculatedPitch) {
-      updateLinePitch(selectedLineId, calculatedPitch);
-    }
   };
 
   const handleSavePitch = () => {
@@ -210,7 +201,7 @@ const VisualPitchTool: React.FC = () => {
       </div>
 
       {/* 3. Controls Area (Sliders) — flex-none so it never shrinks off screen */}
-      <div className="relative z-30 flex-none flex flex-col gap-4 border-t border-inverse-on-surface/15 bg-inverse-surface p-4 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
+      <div className="relative z-30 flex-none flex flex-col gap-3 border-t border-inverse-on-surface/15 bg-inverse-surface p-3 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
 
         {/* Sliders Grid */}
         <div className="grid grid-cols-1 gap-4">
@@ -244,41 +235,15 @@ const VisualPitchTool: React.FC = () => {
           </div>
         </div>
 
-        <div className="my-1 border-t border-inverse-on-surface/15" />
+        <div className="border-t border-inverse-on-surface/15" />
 
-        {/* Save Pitch + Apply Row */}
-        <div className="flex gap-2 items-center">
-          {/* Save Pitch button */}
-          <button
-            onClick={handleSavePitch}
-            className="rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
-          >
-            Save {calculatedPitch}
-          </button>
-
-          {/* Apply to line */}
-          <div className="flex-1 flex flex-col gap-1">
-            <div className="text-[10px] text-inverse-on-surface/50">
-              {selectedLine ? (
-                <span>Apply to <span className="font-bold text-tertiary-fixed-dim">Line {selectedLine.id.slice(0, 4)}</span></span>
-              ) : (
-                <span className="italic text-inverse-on-surface/40">Select a line to apply</span>
-              )}
-            </div>
-            <button
-              disabled={!selectedLineId}
-              onClick={handleApplyPitch}
-              className={`
-                w-full rounded-lg py-2 text-xs font-bold uppercase tracking-wide shadow-md transition-all
-                ${selectedLineId
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400'
-                  : 'cursor-not-allowed bg-inverse-on-surface/10 text-inverse-on-surface/35'}
-              `}
-            >
-              Apply {calculatedPitch}
-            </button>
-          </div>
-        </div>
+        {/* Save Pitch button */}
+        <button
+          onClick={handleSavePitch}
+          className="w-full rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+        >
+          Save {calculatedPitch}
+        </button>
 
         {/* Saved pitches chips */}
         {savedPitches.length > 0 && (
