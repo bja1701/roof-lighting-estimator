@@ -4,6 +4,12 @@ import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { getColorForPitch, SELECTED_LINE_COLOR } from '../utils/pitchColors';
 
+// Pixel coordinates of the pending touch-placement indicator (null = not active)
+interface PendingPlacement {
+  x: number; // pixels relative to wrapper
+  y: number;
+}
+
 const containerStyle = {
   width: '100%',
   height: '100%',
@@ -48,8 +54,14 @@ const SatelliteCanvas: React.FC = () => {
   const [overlayProjection, setOverlayProjection] = useState<any>(null);
   const mapRef = useRef<any>(null);
 
-  // Touch drag state
+  // Touch drag state — for repositioning an already-placed node
   const capturedNodeId = useRef<string | null>(null);
+
+  // Pending placement — touch-to-place crosshair indicator (draw mode only)
+  const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
+  // Store pending coords in a ref too so the touchend handler can read the latest value
+  // without a stale closure (the native listener is registered once via useEffect).
+  const pendingPlacementRef = useRef<PendingPlacement | null>(null);
 
   // Wrapper ref for native (non-passive) touch listeners
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -67,13 +79,23 @@ const SatelliteCanvas: React.FC = () => {
     return () => clearTimeout(timer);
   }, [selectedTool]);
 
+  // Track whether the last interaction was a touch-end commit, so we can suppress
+  // the synthetic `click` that browsers fire after touchend (which would double-place).
+  const touchCommittedRef = useRef(false);
+
   /**
    * MASTER CLICK HANDLER (Wrapper DIV)
-   * This handles clicks on the map background.
+   * Mouse-only — touch placement goes through handleTouchEnd.
    * - Draw Mode: Adds Node
    * - Select Mode: Deselects Line
    */
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Suppress the ghost click that fires after a touch-end placement.
+    if (touchCommittedRef.current) {
+      touchCommittedRef.current = false;
+      return;
+    }
+
     // 1. If Zoomed, disable interaction
     if (isSuperZoom) return;
 
@@ -84,7 +106,7 @@ const SatelliteCanvas: React.FC = () => {
         return;
     }
 
-    // 3. Draw Mode Logic: Add Node
+    // 3. Draw Mode Logic: Add Node (mouse/desktop only)
     if (selectedTool === 'draw') {
         // If we don't have the projection or map, we can't do math.
         if (!overlayProjection || !mapRef.current) return;
@@ -176,8 +198,12 @@ const SatelliteCanvas: React.FC = () => {
   // B2: useCallback makes these stable references for the useEffect dependency array.
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (isSuperZoom) return; // B3 guard
-    if (!overlayProjection || nodes.length === 0) return;
+    if (isSuperZoom) return;
+
+    // Two-finger gesture = pinch/pan — never intercept, let the map handle it.
+    if (e.touches.length > 1) return;
+
+    if (!overlayProjection) return;
     const touch = e.touches[0];
     const el = wrapperRef.current;
     if (!el) return;
@@ -186,11 +212,8 @@ const SatelliteCanvas: React.FC = () => {
     const y = touch.clientY - rect.top;
     const win = window as any;
     if (!win.google || !win.google.maps) return;
-    const point = new win.google.maps.Point(x, y);
-    const touchLatLng = overlayProjection.fromContainerPixelToLatLng(point);
-    if (!touchLatLng) return;
 
-    // Find the nearest node within 24px
+    // --- Check whether the touch landed on an existing node (larger 36px touch target) ---
     let closestId: string | null = null;
     let closestDist = Infinity;
     for (const node of nodes) {
@@ -199,42 +222,67 @@ const SatelliteCanvas: React.FC = () => {
       );
       if (!nodePoint) continue;
       const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
-      if (dist < 24 && dist < closestDist) {
+      // 36px touch target radius (visually the circle is smaller, but finger needs room)
+      if (dist < 36 && dist < closestDist) {
         closestDist = dist;
         closestId = node.id;
       }
     }
 
     if (closestId) {
+      // Drag an existing node — same as before
       capturedNodeId.current = closestId;
-      pushUndo(); // snapshot before drag mutates node position
-      e.preventDefault(); // block map pan — works because listener is { passive: false }
+      pushUndo();
+      e.preventDefault();
+      return;
     }
-    // If no node found, do nothing — map pan proceeds normally
-  }, [isSuperZoom, overlayProjection, nodes, pushUndo]);
+
+    // --- Draw mode: start a pending placement indicator ---
+    if (selectedTool === 'draw') {
+      const placement = { x, y };
+      pendingPlacementRef.current = placement;
+      setPendingPlacement(placement);
+      e.preventDefault(); // prevent map pan while the indicator is live
+    }
+    // Select mode with no node hit: let the map pan proceed (do nothing).
+  }, [isSuperZoom, overlayProjection, nodes, pushUndo, selectedTool]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (isSuperZoom) return; // B3 guard
-    if (!capturedNodeId.current || !overlayProjection) return;
-    e.preventDefault();
-    const touch = e.touches[0];
+    if (isSuperZoom) return;
+    if (e.touches.length > 1) return; // pinch in progress — don't interfere
+
     const el = wrapperRef.current;
     if (!el) return;
+    const touch = e.touches[0];
     const rect = el.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     const win = window as any;
     if (!win.google || !win.google.maps) return;
-    const point = new win.google.maps.Point(x, y);
-    const latLng = overlayProjection.fromContainerPixelToLatLng(point);
-    if (latLng) {
-      updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+
+    if (capturedNodeId.current && overlayProjection) {
+      // Dragging an existing node
+      e.preventDefault();
+      const point = new win.google.maps.Point(x, y);
+      const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+      if (latLng) {
+        updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+      }
+      return;
+    }
+
+    if (pendingPlacementRef.current !== null) {
+      // Dragging the pending placement indicator to fine-tune position
+      e.preventDefault();
+      const placement = { x, y };
+      pendingPlacementRef.current = placement;
+      setPendingPlacement(placement);
     }
   }, [isSuperZoom, overlayProjection, updateNodePosition]);
 
-  // B2: Attach touchstart/touchmove as native { passive: false } listeners so
-  // e.preventDefault() actually works. React attaches synthetic touch events
-  // at the root as passive, making preventDefault() a no-op on Chrome/Safari.
+  // Attach touchstart/touchmove as native { passive: false } listeners so
+  // e.preventDefault() actually works. React synthetic touch events at the
+  // document root are passive on Chrome/Safari, making preventDefault() a no-op.
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -246,9 +294,32 @@ const SatelliteCanvas: React.FC = () => {
     };
   }, [handleTouchStart, handleTouchMove]);
 
-  const handleTouchEnd = (_e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = useCallback((_e: React.TouchEvent<HTMLDivElement>) => {
+    // Commit a pending placement: convert final pixel position → LatLng → addNode
+    if (pendingPlacementRef.current !== null && overlayProjection) {
+      const { x, y } = pendingPlacementRef.current;
+      const win = window as any;
+      if (win.google && win.google.maps) {
+        const point = new win.google.maps.Point(x, y);
+        const latLng = overlayProjection.fromContainerPixelToLatLng(point);
+        if (latLng) {
+          pushUndo();
+          const newNodeId = addNode(latLng.lat(), latLng.lng());
+          if (activeDrawNodeId) {
+            addLine(activeDrawNodeId, newNodeId, 'eave');
+          }
+          setActiveDrawNode(newNodeId);
+          // Flag so the ghost `click` event fired by the browser after touchend
+          // does not trigger handleCanvasClick and double-place a node.
+          touchCommittedRef.current = true;
+        }
+      }
+      pendingPlacementRef.current = null;
+      setPendingPlacement(null);
+    }
+
     capturedNodeId.current = null;
-  };
+  }, [overlayProjection, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
 
   const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
 
@@ -326,8 +397,6 @@ const SatelliteCanvas: React.FC = () => {
           })}
 
           {/* Render Nodes */}
-          {/* Only render nodes in Draw mode or if needed for debugging/visuals. 
-              Usually useful to see them to connect lines. */}
           {nodes.map((node) => (
             <Marker
               key={node.id}
@@ -341,7 +410,12 @@ const SatelliteCanvas: React.FC = () => {
                 fillOpacity: 1,
                 strokeColor: '#1f3d2c',
                 strokeWeight: 1,
-                scale: selectedTool === 'draw' ? 3 : 2, // Make nodes slightly bigger in draw mode
+                // On touch devices use scale 8 so the visual circle is large enough
+                // to see AND the Google Maps hit target is wide enough for fingers.
+                // On desktop keep the existing compact sizes.
+                scale: isTouchDevice
+                  ? 8
+                  : selectedTool === 'draw' ? 3 : 2,
               }}
               clickable={selectedTool === 'draw' || selectedTool === 'select'}
               cursor={selectedTool === 'draw' ? 'crosshair' : 'grab'}
@@ -350,6 +424,69 @@ const SatelliteCanvas: React.FC = () => {
         </GoogleMap>
       </div>
       
+      {/* Touch placement crosshair — follows finger, committed on touchend */}
+      {pendingPlacement && (
+        <div
+          className="absolute pointer-events-none z-50"
+          style={{
+            left: pendingPlacement.x,
+            top: pendingPlacement.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {/* Outer ring — large so the finger doesn't obscure the target */}
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              border: '2px solid rgba(247,243,234,0.7)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Inner dot */}
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#f7f3ea',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Horizontal arm */}
+          <div
+            style={{
+              width: 40,
+              height: 1,
+              background: 'rgba(247,243,234,0.8)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          {/* Vertical arm */}
+          <div
+            style={{
+              width: 1,
+              height: 40,
+              background: 'rgba(247,243,234,0.8)',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        </div>
+      )}
+
       {/* Centered Helper Notification */}
       <div 
         className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none transition-opacity duration-500 ease-out ${
