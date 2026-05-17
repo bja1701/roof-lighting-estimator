@@ -39,6 +39,7 @@ const SatelliteCanvas: React.FC = () => {
     activeDrawNodeId,
     setActiveDrawNode,
     updateNodePosition,
+    pushUndo,
   } = useEstimatorStore();
 
   const [showHelper, setShowHelper] = useState(false);
@@ -106,8 +107,9 @@ const SatelliteCanvas: React.FC = () => {
         const latLng = overlayProjection.fromContainerPixelToLatLng(point);
 
         if (latLng) {
+            pushUndo();
             const newNodeId = addNode(latLng.lat(), latLng.lng());
-            
+
             // Auto-connect if we have a previous node
             if (activeDrawNodeId) {
                 addLine(activeDrawNodeId, newNodeId, 'eave');
@@ -146,6 +148,7 @@ const SatelliteCanvas: React.FC = () => {
   // Node Drag End (for repositioning in Select Mode)
   const handleNodeDragEnd = (e: any, nodeId: string) => {
     if (e.latLng) {
+      pushUndo();
       updateNodePosition(nodeId, e.latLng.lat(), e.latLng.lng());
     }
   };
@@ -204,10 +207,11 @@ const SatelliteCanvas: React.FC = () => {
 
     if (closestId) {
       capturedNodeId.current = closestId;
+      pushUndo(); // snapshot before drag mutates node position
       e.preventDefault(); // block map pan — works because listener is { passive: false }
     }
     // If no node found, do nothing — map pan proceeds normally
-  }, [isSuperZoom, overlayProjection, nodes]);
+  }, [isSuperZoom, overlayProjection, nodes, pushUndo]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (isSuperZoom) return; // B3 guard
@@ -243,8 +247,6 @@ const SatelliteCanvas: React.FC = () => {
   }, [handleTouchStart, handleTouchMove]);
 
   const handleTouchEnd = (_e: React.TouchEvent<HTMLDivElement>) => {
-    if (!capturedNodeId.current) return;
-    // No undo stack on this branch — position is already committed via updateNodePosition
     capturedNodeId.current = null;
   };
 

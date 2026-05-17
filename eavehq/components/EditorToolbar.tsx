@@ -18,6 +18,7 @@ const EditorToolbar: React.FC = () => {
     redo,
     canUndo,
     canRedo,
+    pushUndo,
   } = useEstimatorStore();
 
   useEffect(() => {
@@ -33,12 +34,14 @@ const EditorToolbar: React.FC = () => {
       if (key === 'e') setActiveDrawNode(null);
       if (key === 'delete' || key === 'backspace') {
         if (selectedLineId) {
+          pushUndo();
           removeLine(selectedLineId);
           selectLine(null);
         }
       }
       if (key === 'w') {
         if (nodes.length > 0) {
+          pushUndo();
           const lastNode = nodes[nodes.length - 1];
           removeNode(lastNode.id);
         }
@@ -46,7 +49,7 @@ const EditorToolbar: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTool, nodes, removeNode, selectedLineId, removeLine, setSelectedTool, selectLine, toggleSuperZoom, setActiveDrawNode]);
+  }, [selectedTool, nodes, removeNode, selectedLineId, removeLine, setSelectedTool, selectLine, toggleSuperZoom, setActiveDrawNode, pushUndo]);
 
   const tools = [
     {
