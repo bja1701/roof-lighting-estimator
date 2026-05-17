@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Building2, DollarSign, Bell, CreditCard, Zap, Check, Upload, Image, ExternalLink, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Building2, DollarSign, Bell, CreditCard, Zap, Check, Upload, Image, ExternalLink, Loader2, CheckCircle, AlertTriangle, CalendarDays } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
@@ -58,6 +58,11 @@ export default function SettingsPage() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [pendingActivation, setPendingActivation] = useState(upgradeSuccess);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // GCal integration state
+  const gcalSuccess = searchParams.get('gcal') === 'success';
+  const gcalError   = searchParams.get('gcal') === 'error';
+  const [gcalConnecting, setGcalConnecting] = useState(false);
 
   useEffect(() => {
     if (!upgradeSuccess || !user) return;
@@ -127,6 +132,36 @@ export default function SettingsPage() {
     if (fnError || !data?.url) { setError('Could not start Stripe onboarding. Please try again.'); return; }
     window.location.href = data.url;
   };
+
+  const handleConnectGcal = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    setGcalConnecting(true);
+    const state     = btoa(session.user.id);
+    const clientId  = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+    const redirect  = import.meta.env.VITE_GCAL_REDIRECT_URI ?? '';
+    const scope     = 'https://www.googleapis.com/auth/calendar';
+    const authUrl   = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    authUrl.searchParams.set('client_id',     clientId);
+    authUrl.searchParams.set('redirect_uri',  redirect);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('scope',         scope);
+    authUrl.searchParams.set('access_type',   'offline');
+    authUrl.searchParams.set('prompt',        'consent');
+    authUrl.searchParams.set('state',         state);
+    window.location.href = authUrl.toString();
+  }, []);
+
+  const handleDisconnectGcal = useCallback(async () => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ gcal_connected: false, gcal_refresh_token: null })
+      .eq('id', profile?.id ?? '');
+    if (!error && profile) {
+      // Reflect in local store without full refetch
+      updateProfile({ gcal_connected: false, gcal_refresh_token: null });
+    }
+  }, [profile, updateProfile]);
 
   const handleManageBilling = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -459,6 +494,52 @@ export default function SettingsPage() {
                   </AccentButton>
                 </div>
               )}
+            </Section>
+
+            {/* Google Calendar */}
+            <Section icon={<CalendarDays size={16} />} title="Google Calendar" subtitle="Sync scheduled jobs to your Google Calendar">
+              {gcalSuccess && (
+                <div className="mb-4 px-4 py-3 rounded-lg flex items-center gap-2" style={{ background: 'rgba(61,158,106,0.1)', border: '1px solid rgba(61,158,106,0.28)' }}>
+                  <CheckCircle size={14} style={{ color: 'var(--color-success)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-success)' }}>Google Calendar connected successfully.</span>
+                </div>
+              )}
+              {gcalError && (
+                <div className="mb-4 px-4 py-3 rounded-lg flex items-center gap-2" style={{ background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.2)' }}>
+                  <AlertTriangle size={14} style={{ color: 'var(--color-destructive)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>Google Calendar connection failed. Please try again.</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>
+                    {profile?.gcal_connected ? 'Connected' : 'Not connected'}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>
+                    {profile?.gcal_connected
+                      ? 'Scheduled jobs will be pushed to your primary Google Calendar.'
+                      : 'Connect to push scheduled jobs to Google Calendar and see GCal events on your schedule.'}
+                  </div>
+                </div>
+                <div>
+                  {profile?.gcal_connected ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDisconnectGcal()}
+                      className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                      style={{ color: 'var(--color-destructive)', border: '1px solid rgba(201,64,64,0.25)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,64,64,0.06)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      Disconnect
+                    </button>
+                  ) : (
+                    <AccentButton onClick={() => void handleConnectGcal()} loading={gcalConnecting}>
+                      {gcalConnecting ? 'Redirecting…' : 'Connect Google Calendar'}
+                    </AccentButton>
+                  )}
+                </div>
+              </div>
             </Section>
 
             {/* Plan & Billing */}

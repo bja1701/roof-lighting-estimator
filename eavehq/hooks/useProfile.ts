@@ -24,6 +24,9 @@ export interface Profile {
   role: 'user' | 'admin';
   followup_days: number;
   followup_max: number;
+  // Task J — GCal integration
+  gcal_connected: boolean;
+  gcal_refresh_token: string | null;
 }
 
 interface ProfileState {

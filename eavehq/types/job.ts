@@ -35,6 +35,11 @@ export interface Job {
   // Phase 2 — CRM
   scheduled_date: string | null;
   client_id: string | null;
+  // Task J — schedule redesign
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
+  scheduled_anytime: boolean;
+  gcal_event_id: string | null;
   // Joined from quotes(count) in list queries
   quote_count?: number;
 }

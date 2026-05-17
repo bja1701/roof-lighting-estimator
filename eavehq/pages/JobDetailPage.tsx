@@ -18,8 +18,12 @@ import SharedLayout from '../components/SharedLayout';
 import QuoteCard from '../components/QuoteCard';
 import JobStatusBadge from '../components/JobStatusBadge';
 import JobStreetViewImage from '../components/JobStreetViewImage';
+import ScheduleModal from '../components/ScheduleModal';
+import type { ScheduleValues } from '../components/ScheduleModal';
 import { Job, JobStatus } from '../types/job';
 import { JOB_STATUS_CONFIG } from '../utils/jobStatus';
+
+const GCAL_PUSH_FN = 'https://bsbewwwflqjlxxovjgec.supabase.co/functions/v1/gcal-push';
 
 function timeAgo(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
@@ -88,28 +92,52 @@ export default function JobDetailPage() {
 
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
-  // Schedule date modal
-  const [scheduleDateOpen, setScheduleDateOpen] = useState(false);
-  const [scheduleDateValue, setScheduleDateValue] = useState('');
-  const [scheduleDatePending, setScheduleDatePending] = useState<JobStatus | null>(null);
-  const [scheduleDateSaving, setScheduleDateSaving] = useState(false);
+  // Schedule modal (replaces old date-only modal)
+  const [scheduleModalOpen, setScheduleModalOpen]     = useState(false);
+  const [scheduleModalPending, setScheduleModalPending] = useState<JobStatus | null>(null);
+  const [scheduleModalSaving, setScheduleModalSaving] = useState(false);
 
   const handleStatusChange = (newStatus: JobStatus) =>
     setJob(prev => prev ? { ...prev, status: newStatus } : prev);
 
-  const handleScheduleDateConfirm = async () => {
-    if (!job || !id || !scheduleDatePending || !scheduleDateValue) return;
-    setScheduleDateSaving(true);
+  const handleScheduleConfirm = async (values: ScheduleValues) => {
+    if (!job || !id || !scheduleModalPending) return;
+    setScheduleModalSaving(true);
     const { error } = await supabase
       .from('jobs')
-      .update({ status: scheduleDatePending, scheduled_date: scheduleDateValue })
+      .update({
+        status: scheduleModalPending,
+        scheduled_date: values.date,
+        scheduled_start_time: values.startTime || null,
+        scheduled_end_time: values.endTime || null,
+        scheduled_anytime: values.anytime,
+      })
       .eq('id', id);
-    setScheduleDateSaving(false);
+    setScheduleModalSaving(false);
     if (error) { toast(error.message, 'error'); return; }
-    handleStatusChange(scheduleDatePending);
-    handleJobUpdate({ scheduled_date: scheduleDateValue });
-    setScheduleDateOpen(false);
-    setScheduleDatePending(null);
+    handleStatusChange(scheduleModalPending);
+    handleJobUpdate({
+      scheduled_date: values.date,
+      scheduled_start_time: values.startTime || null,
+      scheduled_end_time: values.endTime || null,
+      scheduled_anytime: values.anytime,
+    });
+    setScheduleModalOpen(false);
+    setScheduleModalPending(null);
+    // Push to GCal in background
+    void pushToGcal(id);
+  };
+
+  const pushToGcal = async (jobId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      await fetch(GCAL_PUSH_FN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+    } catch { /* GCal not connected — skip silently */ }
   };
 
   const handleJobUpdate = (updates: Partial<Job>) =>
@@ -247,21 +275,16 @@ export default function JobDetailPage() {
     if (isStartedTransition && quotes.length === 0) return;
 
     if (nextStatus === 'scheduled') {
-      // Show date picker modal before writing to DB
-      const today = new Date().toISOString().split('T')[0];
-      setScheduleDateValue(job.scheduled_date ?? today);
-      setScheduleDatePending(nextStatus);
-
+      setScheduleModalPending(nextStatus);
       if (!job.deposit_paid_at && job.deposit_amount == null) {
-        // Warn about missing deposit via confirm, then open date modal on confirm
         setConfirmDialog({
           title: 'No deposit recorded',
           message: 'No deposit has been recorded for this job. Mark as Scheduled anyway?',
           confirmLabel: cfg.nextManualLabel ?? 'Continue',
-          onConfirm: () => { setConfirmDialog(null); setScheduleDateOpen(true); },
+          onConfirm: () => { setConfirmDialog(null); setScheduleModalOpen(true); },
         });
       } else {
-        setScheduleDateOpen(true);
+        setScheduleModalOpen(true);
       }
       return;
     }
@@ -684,67 +707,19 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Schedule date modal */}
-      {scheduleDateOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-          style={{ background: 'rgba(31,61,44,0.75)' }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="schedule-date-title"
-          onClick={e => e.target === e.currentTarget && !scheduleDateSaving && setScheduleDateOpen(false)}
-        >
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: 'var(--color-card)', boxShadow: 'var(--shadow-modal)' }}>
-            <h2
-              id="schedule-date-title"
-              className="text-base font-bold mb-2"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
-            >
-              Pick a scheduled date
-            </h2>
-            <p className="text-sm mb-4" style={{ color: 'var(--color-slate)' }}>
-              Choose the date this job is scheduled for.
-            </p>
-            <input
-              type="date"
-              required
-              value={scheduleDateValue}
-              onChange={e => setScheduleDateValue(e.target.value)}
-              disabled={scheduleDateSaving}
-              className="w-full rounded-lg px-3 py-2 text-sm mb-5 outline-none disabled:opacity-50"
-              style={{
-                border: '1.5px solid var(--color-border)',
-                color: 'var(--color-ink)',
-                fontFamily: 'var(--font-body)',
-              }}
-              onFocus={e => (e.currentTarget.style.borderColor = 'var(--color-primary)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
-            />
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setScheduleDateOpen(false); setScheduleDatePending(null); }}
-                disabled={scheduleDateSaving}
-                className="flex-1 rounded-lg py-2.5 text-sm font-medium disabled:opacity-50"
-                style={{ background: 'var(--color-surface)', color: 'var(--color-slate)', border: '1px solid var(--color-border)' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleScheduleDateConfirm()}
-                disabled={scheduleDateSaving || !scheduleDateValue}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-              >
-                {scheduleDateSaving ? <><Loader2 size={15} className="animate-spin" /> Saving…</> : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Schedule modal — date + time picker */}
+      <ScheduleModal
+        open={scheduleModalOpen}
+        initialValues={job ? {
+          date: job.scheduled_date ?? new Date().toISOString().split('T')[0],
+          startTime: job.scheduled_start_time ?? '',
+          endTime: job.scheduled_end_time ?? '',
+          anytime: job.scheduled_anytime ?? false,
+        } : undefined}
+        saving={scheduleModalSaving}
+        onConfirm={values => void handleScheduleConfirm(values)}
+        onCancel={() => { setScheduleModalOpen(false); setScheduleModalPending(null); }}
+      />
 
       {/* Prerequisite block modal (Task C: Stripe, Task D: name/logo) */}
       {prereqBlockOpen && (
