@@ -4,9 +4,9 @@ import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { getColorForPitch, SELECTED_LINE_COLOR } from '../utils/pitchColors';
 
-// Pixel coordinates of the pending touch-placement indicator (null = not active)
-interface PendingPlacement {
-  x: number; // pixels relative to wrapper
+// Trackpad cursor position in canvas pixel space
+interface CursorPos {
+  x: number;
   y: number;
 }
 
@@ -25,9 +25,17 @@ const mapOptions = {
   mapTypeControl: false,
   fullscreenControl: false,
   gestureHandling: 'greedy',
-  disableDoubleClickZoom: true, // IMPORTANT: Disable DblClick Zoom for interaction
+  disableDoubleClickZoom: true,
   draggable: true,
 };
+
+// How far (canvas px) the cursor must be from a node to "lock" in edit mode
+const EDIT_LOCK_RADIUS = 20;
+// Sensitivity multiplier for trackpad-style cursor movement (1.0 = 1:1)
+const CURSOR_SENSITIVITY = 1.0;
+// Max movement (px) + max duration (ms) for a tap to be considered a "click"
+const TAP_MAX_MOVE = 8;
+const TAP_MAX_MS = 200;
 
 const SatelliteCanvas: React.FC = () => {
   const {
@@ -35,7 +43,6 @@ const SatelliteCanvas: React.FC = () => {
     lines,
     satelliteCenter,
     addNode,
-    removeNode,
     addLine,
     selectedTool,
     removeLine,
@@ -50,128 +57,172 @@ const SatelliteCanvas: React.FC = () => {
 
   const [showHelper, setShowHelper] = useState(false);
 
-  // We need the overlay projection to convert pixels (from the div click) to LatLng
+  // Overlay projection for pixel ↔ LatLng conversion
   const [overlayProjection, setOverlayProjection] = useState<any>(null);
   const mapRef = useRef<any>(null);
 
-  // Touch drag state — for repositioning an already-placed node
+  // Touch drag state — for repositioning a node in select mode (direct touch)
   const capturedNodeId = useRef<string | null>(null);
-
-  // Pending placement — touch-to-place crosshair indicator (draw mode only)
-  const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
-  // Store pending coords in a ref too so the touchend handler can read the latest value
-  // without a stale closure (the native listener is registered once via useEffect).
-  const pendingPlacementRef = useRef<PendingPlacement | null>(null);
 
   // Wrapper ref for native (non-passive) touch listeners
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Cached bounding rect — refreshed at touchstart from the map div so coordinates
-  // stay accurate near screen edges and don't go stale during a gesture.
+  // Cached bounding rect — refreshed at touchstart from the map div
   const rectRef = useRef<DOMRect | null>(null);
 
-  // Detect touch device at mount; switches gestureHandling to 'cooperative' so
-  // normal map pan still works when no node is grabbed.
+  // --- Trackpad cursor state (draw + edit modes) ---
+  // Stored in a ref so the native touch handlers always see the latest value.
+  const cursorPosRef = useRef<CursorPos>({ x: 0, y: 0 });
+  // Rendered position (drives the visual overlay)
+  const [cursorPos, setCursorPos] = useState<CursorPos>({ x: 0, y: 0 });
+  // Whether the cursor has been initialized to the canvas center
+  const cursorInitializedRef = useRef(false);
+  // Last touch position (viewport coords) recorded at the start of each touch
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+  // Touch start time + position for tap detection
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Total movement accumulated during current touch (used for tap detection)
+  const touchMovedRef = useRef(0);
+
+  // --- Edit mode state ---
+  // Which node the cursor is locked to (within EDIT_LOCK_RADIUS)
+  const nearestEditNodeRef = useRef<string | null>(null);
+  const [nearestEditNode, setNearestEditNode] = useState<string | null>(null);
+  // Which node is currently grabbed (being dragged by cursor)
+  const grabbedNodeRef = useRef<string | null>(null);
+  const [grabbedNode, setGrabbedNode] = useState<string | null>(null);
+
+  // Detect touch device at mount
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+
+  // Track whether the last interaction was a touch-end commit (suppress ghost click)
+  const touchCommittedRef = useRef(false);
 
   // --- Tool Helper Fade Logic ---
   useEffect(() => {
     setShowHelper(true);
-    const timer = setTimeout(() => {
-      setShowHelper(false);
-    }, 1500); // Display for 1.5 seconds
+    const timer = setTimeout(() => setShowHelper(false), 1500);
     return () => clearTimeout(timer);
   }, [selectedTool]);
 
-  // Track whether the last interaction was a touch-end commit, so we can suppress
-  // the synthetic `click` that browsers fire after touchend (which would double-place).
-  const touchCommittedRef = useRef(false);
+  // Initialize cursor to canvas center when entering draw or edit mode
+  useEffect(() => {
+    if (selectedTool === 'draw' || selectedTool === 'edit') {
+      if (!cursorInitializedRef.current && wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        const center = { x: rect.width / 2, y: rect.height / 2 };
+        cursorPosRef.current = center;
+        setCursorPos(center);
+        cursorInitializedRef.current = true;
+      }
+    } else {
+      cursorInitializedRef.current = false;
+    }
+  }, [selectedTool]);
 
   /**
-   * MASTER CLICK HANDLER (Wrapper DIV)
-   * Mouse-only — touch placement goes through handleTouchEnd.
-   * - Draw Mode: Adds Node
-   * - Select Mode: Deselects Line
+   * Convert a canvas pixel position to LatLng using the overlay projection.
+   */
+  const canvasPxToLatLng = useCallback((x: number, y: number) => {
+    if (!overlayProjection) return null;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return null;
+    const scaleFactor = isSuperZoom ? 2 : 1;
+    const point = new win.google.maps.Point(x / scaleFactor, y / scaleFactor);
+    return overlayProjection.fromContainerPixelToLatLng(point);
+  }, [overlayProjection, isSuperZoom]);
+
+  /**
+   * Find the canvas pixel position of a node (LatLng → canvas px).
+   */
+  const nodeToCanvasPx = useCallback((lat: number, lng: number) => {
+    if (!overlayProjection) return null;
+    const win = window as any;
+    if (!win.google || !win.google.maps) return null;
+    const px = overlayProjection.fromLatLngToContainerPixel(
+      new win.google.maps.LatLng(lat, lng)
+    );
+    if (!px) return null;
+    const scaleFactor = isSuperZoom ? 2 : 1;
+    return { x: px.x * scaleFactor, y: px.y * scaleFactor };
+  }, [overlayProjection, isSuperZoom]);
+
+  /**
+   * Find the closest node to a canvas pixel position, within a given radius.
+   */
+  const findNearestNode = useCallback((cx: number, cy: number, radius: number): string | null => {
+    let closest: string | null = null;
+    let closestDist = radius;
+    for (const node of nodes) {
+      const px = nodeToCanvasPx(node.lat, node.lng);
+      if (!px) continue;
+      const dist = Math.hypot(px.x - cx, px.y - cy);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = node.id;
+      }
+    }
+    return closest;
+  }, [nodes, nodeToCanvasPx]);
+
+  /**
+   * Update nearestEditNode based on cursor position (edit mode only).
+   */
+  const updateEditProximity = useCallback((cx: number, cy: number) => {
+    if (selectedTool !== 'edit') return;
+    const nearest = findNearestNode(cx, cy, EDIT_LOCK_RADIUS);
+    nearestEditNodeRef.current = nearest;
+    setNearestEditNode(nearest);
+  }, [selectedTool, findNearestNode]);
+
+  /**
+   * MASTER CLICK HANDLER (Wrapper DIV) — Mouse-only.
    */
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Suppress the ghost click that fires after a touch-end placement.
     if (touchCommittedRef.current) {
       touchCommittedRef.current = false;
       return;
     }
-
-    // 1. If Zoomed, disable interaction
     if (isSuperZoom) return;
 
-    // 2. Select Mode Logic: Clicking empty space clears selection
     if (selectedTool === 'select') {
-        selectLine(null);
-        setActiveDrawNode(null);
-        return;
+      selectLine(null);
+      setActiveDrawNode(null);
+      return;
     }
 
-    // 3. Draw Mode Logic: Add Node (mouse/desktop only)
     if (selectedTool === 'draw') {
-        // If we don't have the projection or map, we can't do math.
-        if (!overlayProjection || !mapRef.current) return;
-
-        // Get click coordinates relative to the map container
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // Apply the Scale Correction
-        const scaleFactor = isSuperZoom ? 2 : 1;
-        const correctedX = x / scaleFactor;
-        const correctedY = y / scaleFactor;
-
-        // Convert to LatLng
-        const win = window as any;
-        if (!win.google || !win.google.maps) return;
-
-        const point = new win.google.maps.Point(correctedX, correctedY);
-        const latLng = overlayProjection.fromContainerPixelToLatLng(point);
-
-        if (latLng) {
-            pushUndo();
-            const newNodeId = addNode(latLng.lat(), latLng.lng());
-
-            // Auto-connect if we have a previous node
-            if (activeDrawNodeId) {
-                addLine(activeDrawNodeId, newNodeId, 'eave');
-            }
-            setActiveDrawNode(newNodeId);
-        }
+      if (!overlayProjection || !mapRef.current) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const latLng = canvasPxToLatLng(x, y);
+      if (latLng) {
+        pushUndo();
+        const newNodeId = addNode(latLng.lat(), latLng.lng());
+        if (activeDrawNodeId) addLine(activeDrawNodeId, newNodeId, 'eave');
+        setActiveDrawNode(newNodeId);
+      }
     }
   };
 
   /**
    * LINE INTERACTION HANDLERS
    */
-
-  // Single Click on Line
-  const handleLineClick = (e: any, lineId: string) => {
+  const handleLineClick = (e: any, _lineId: string) => {
     if (isSuperZoom) return;
-
-    // Select Mode: Single click does nothing BUT blocks the map click (which would deselect)
     if (selectedTool === 'select') {
-        if (e.domEvent) e.domEvent.stopPropagation();
-        return;
+      if (e.domEvent) e.domEvent.stopPropagation();
     }
-
-    // Draw Mode: Pass through (handled by clickable={false} prop below)
   };
 
-  // Double Click on Line
   const handleLineDblClick = (e: any, lineId: string) => {
     if (selectedTool === 'select') {
-        selectLine(lineId);
-        // Stop bubbling so the map doesn't zoom (already disabled) or deselect
-        if (e.domEvent) e.domEvent.stopPropagation();
+      selectLine(lineId);
+      if (e.domEvent) e.domEvent.stopPropagation();
     }
   };
 
-  // Node Drag End (for repositioning in Select Mode)
   const handleNodeDragEnd = (e: any, nodeId: string) => {
     if (e.latLng) {
       pushUndo();
@@ -179,122 +230,135 @@ const SatelliteCanvas: React.FC = () => {
     }
   };
 
-  // Node Click (for connecting lines in Draw Mode)
   const handleNodeClick = (e: any, nodeId: string) => {
     if (e.stop) e.stop();
     if (isSuperZoom) return;
-
-    // Only allow linking in Draw mode
     if (selectedTool === 'draw') {
-        if (activeDrawNodeId && activeDrawNodeId !== nodeId) {
-            addLine(activeDrawNodeId, nodeId, 'eave');
-            setActiveDrawNode(nodeId);
-        } else {
-            setActiveDrawNode(nodeId);
-        }
+      if (activeDrawNodeId && activeDrawNodeId !== nodeId) {
+        addLine(activeDrawNodeId, nodeId, 'eave');
+        setActiveDrawNode(nodeId);
+      } else {
+        setActiveDrawNode(nodeId);
+      }
     }
   };
 
-
-  // --- Touch Drag Handlers ---
-
-  // B3: isSuperZoom guard added as first line in both handlers.
-  // B2: useCallback makes these stable references for the useEffect dependency array.
+  // --- Native Touch Handlers ---
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    // Refresh bounding rect at the start of every gesture from the map div — this gives
-    // accurate coords near screen edges and avoids stale values after scroll/resize.
     const mapDiv = (mapRef.current as any)?.getDiv?.() as HTMLElement | undefined;
     rectRef.current = mapDiv?.getBoundingClientRect()
       ?? wrapperRef.current?.getBoundingClientRect()
       ?? null;
 
     if (isSuperZoom) return;
-
-    // Two-finger gesture = pinch/pan — never intercept, let the map handle it.
     if (e.touches.length > 1) return;
-
     if (!overlayProjection) return;
+
     const touch = e.touches[0];
     if (!rectRef.current) return;
-    const rect = rectRef.current;
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    const win = window as any;
-    if (!win.google || !win.google.maps) return;
 
-    // --- Check whether the touch landed on an existing node (larger 36px touch target) ---
-    let closestId: string | null = null;
-    let closestDist = Infinity;
-    for (const node of nodes) {
-      const nodePoint = overlayProjection.fromLatLngToContainerPixel(
-        new win.google.maps.LatLng(node.lat, node.lng)
-      );
-      if (!nodePoint) continue;
-      const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
-      // 36px touch target radius (visually the circle is smaller, but finger needs room)
-      if (dist < 36 && dist < closestDist) {
-        closestDist = dist;
-        closestId = node.id;
-      }
-    }
+    // Record touch start for tap detection
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() };
+    touchMovedRef.current = 0;
 
-    if (closestId) {
-      // Drag an existing node — same as before
-      capturedNodeId.current = closestId;
-      pushUndo();
+    // --- Trackpad cursor mode (draw or edit) ---
+    if (selectedTool === 'draw' || selectedTool === 'edit') {
+      // Record where finger landed in viewport coords — movement is relative from here
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
       e.preventDefault();
       return;
     }
 
-    // --- Draw mode: start a pending placement indicator ---
-    if (selectedTool === 'draw') {
-      const placement = { x, y };
-      pendingPlacementRef.current = placement;
-      setPendingPlacement(placement);
-      e.preventDefault(); // prevent map pan while the indicator is live
+    // --- Select mode: direct node drag ---
+    if (selectedTool === 'select') {
+      const rect = rectRef.current;
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      const win = window as any;
+      if (!win.google || !win.google.maps) return;
+
+      let closestId: string | null = null;
+      let closestDist = Infinity;
+      for (const node of nodes) {
+        const nodePoint = overlayProjection.fromLatLngToContainerPixel(
+          new win.google.maps.LatLng(node.lat, node.lng)
+        );
+        if (!nodePoint) continue;
+        const dist = Math.hypot(nodePoint.x - x, nodePoint.y - y);
+        if (dist < 36 && dist < closestDist) {
+          closestDist = dist;
+          closestId = node.id;
+        }
+      }
+
+      if (closestId) {
+        capturedNodeId.current = closestId;
+        pushUndo();
+        e.preventDefault();
+      }
     }
-    // Select mode with no node hit: let the map pan proceed (do nothing).
   }, [isSuperZoom, overlayProjection, nodes, pushUndo, selectedTool]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (isSuperZoom) return;
-    if (e.touches.length > 1) return; // pinch in progress — don't interfere
+    if (e.touches.length > 1) return;
 
-    if (!rectRef.current) return;
     const touch = e.touches[0];
-    const rect = rectRef.current;
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    const win = window as any;
-    if (!win.google || !win.google.maps) return;
 
-    if (capturedNodeId.current && overlayProjection) {
-      // Dragging an existing node — apply SuperZoom scale correction
+    // Track movement for tap detection
+    if (touchStartRef.current) {
+      touchMovedRef.current = Math.hypot(
+        touch.clientX - touchStartRef.current.x,
+        touch.clientY - touchStartRef.current.y
+      );
+    }
+
+    // --- Trackpad cursor mode ---
+    if ((selectedTool === 'draw' || selectedTool === 'edit') && lastTouchRef.current) {
       e.preventDefault();
-      const scaleFactor = isSuperZoom ? 2 : 1;
-      const correctedX = x / scaleFactor;
-      const correctedY = y / scaleFactor;
-      const point = new win.google.maps.Point(correctedX, correctedY);
-      const latLng = overlayProjection.fromContainerPixelToLatLng(point);
-      if (latLng) {
-        updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+      const dx = (touch.clientX - lastTouchRef.current.x) * CURSOR_SENSITIVITY;
+      const dy = (touch.clientY - lastTouchRef.current.y) * CURSOR_SENSITIVITY;
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+
+      const el = wrapperRef.current;
+      const w = el?.clientWidth ?? 0;
+      const h = el?.clientHeight ?? 0;
+      const newPos = {
+        x: Math.max(0, Math.min(w, cursorPosRef.current.x + dx)),
+        y: Math.max(0, Math.min(h, cursorPosRef.current.y + dy)),
+      };
+      cursorPosRef.current = newPos;
+      setCursorPos({ ...newPos });
+
+      // In edit mode with a grabbed node: move the node live
+      if (selectedTool === 'edit' && grabbedNodeRef.current) {
+        const latLng = canvasPxToLatLng(newPos.x, newPos.y);
+        if (latLng) {
+          updateNodePosition(grabbedNodeRef.current, latLng.lat(), latLng.lng());
+        }
+      } else if (selectedTool === 'edit') {
+        // Update nearest-node proximity
+        updateEditProximity(newPos.x, newPos.y);
       }
       return;
     }
 
-    if (pendingPlacementRef.current !== null) {
-      // Dragging the pending placement indicator to fine-tune position
-      e.preventDefault();
-      const placement = { x, y };
-      pendingPlacementRef.current = placement;
-      setPendingPlacement(placement);
-    }
-  }, [isSuperZoom, overlayProjection, updateNodePosition]);
+    // --- Select mode: node drag ---
+    if (!rectRef.current) return;
+    const rect = rectRef.current;
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
 
-  // Attach touchstart/touchmove as native { passive: false } listeners so
-  // e.preventDefault() actually works. React synthetic touch events at the
-  // document root are passive on Chrome/Safari, making preventDefault() a no-op.
+    if (capturedNodeId.current && overlayProjection) {
+      e.preventDefault();
+      const latLng = canvasPxToLatLng(x, y);
+      if (latLng) {
+        updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
+      }
+    }
+  }, [isSuperZoom, overlayProjection, selectedTool, updateNodePosition, canvasPxToLatLng, updateEditProximity]);
+
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -307,39 +371,49 @@ const SatelliteCanvas: React.FC = () => {
   }, [handleTouchStart, handleTouchMove]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent<HTMLDivElement>) => {
-    // Commit a pending placement: convert final pixel position → LatLng → addNode
-    // Apply SuperZoom scale correction so placement is accurate at 2× scale.
-    if (pendingPlacementRef.current !== null && overlayProjection) {
-      const { x, y } = pendingPlacementRef.current;
-      const win = window as any;
-      if (win.google && win.google.maps) {
-        const scaleFactor = isSuperZoom ? 2 : 1;
-        const correctedX = x / scaleFactor;
-        const correctedY = y / scaleFactor;
-        const point = new win.google.maps.Point(correctedX, correctedY);
-        const latLng = overlayProjection.fromContainerPixelToLatLng(point);
-        if (latLng) {
-          pushUndo();
-          const newNodeId = addNode(latLng.lat(), latLng.lng());
-          if (activeDrawNodeId) {
-            addLine(activeDrawNodeId, newNodeId, 'eave');
-          }
-          setActiveDrawNode(newNodeId);
-          // Flag so the ghost `click` event fired by the browser after touchend
-          // does not trigger handleCanvasClick and double-place a node.
-          touchCommittedRef.current = true;
-        }
+    const isTap =
+      touchStartRef.current !== null &&
+      touchMovedRef.current < TAP_MAX_MOVE &&
+      Date.now() - touchStartRef.current.t < TAP_MAX_MS;
+
+    // --- Draw mode tap: place node at cursor ---
+    if (selectedTool === 'draw' && isTap && overlayProjection) {
+      const { x, y } = cursorPosRef.current;
+      const latLng = canvasPxToLatLng(x, y);
+      if (latLng) {
+        pushUndo();
+        const newNodeId = addNode(latLng.lat(), latLng.lng());
+        if (activeDrawNodeId) addLine(activeDrawNodeId, newNodeId, 'eave');
+        setActiveDrawNode(newNodeId);
+        touchCommittedRef.current = true;
       }
-      pendingPlacementRef.current = null;
-      setPendingPlacement(null);
     }
 
+    // --- Edit mode tap: grab/release node ---
+    if (selectedTool === 'edit' && isTap) {
+      if (grabbedNodeRef.current) {
+        // Release the grabbed node
+        grabbedNodeRef.current = null;
+        setGrabbedNode(null);
+        touchCommittedRef.current = true;
+      } else if (nearestEditNodeRef.current) {
+        // Grab the nearest node — pushUndo before grab so we can revert
+        pushUndo();
+        grabbedNodeRef.current = nearestEditNodeRef.current;
+        setGrabbedNode(nearestEditNodeRef.current);
+        touchCommittedRef.current = true;
+      }
+    }
+
+    // Reset select-mode drag
     capturedNodeId.current = null;
-  }, [overlayProjection, isSuperZoom, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
+    lastTouchRef.current = null;
+    touchStartRef.current = null;
+  }, [selectedTool, overlayProjection, canvasPxToLatLng, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
 
   const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
 
-  // Determine Cursor Style
+  // Cursor style for the wrapper div
   let cursorClass = '';
   if (isSuperZoom) {
     cursorClass = 'cursor-zoom-out';
@@ -349,16 +423,21 @@ const SatelliteCanvas: React.FC = () => {
     cursorClass = 'cursor-default';
   }
 
+  // Whether to show the trackpad cursor overlay
+  const showTrackpadCursor = (selectedTool === 'draw' || selectedTool === 'edit') && isTouchDevice;
+
+  // Cursor visual state: locked to node + grabbed
+  const cursorLocked = selectedTool === 'edit' && nearestEditNode !== null;
+  const cursorGrabbed = selectedTool === 'edit' && grabbedNode !== null;
+
   return (
     <div className="relative w-full h-full overflow-hidden group" style={{ background: 'rgba(15,25,40,0.98)' }}>
 
-      {/*
-         The Transform Wrapper
-      */}
+      {/* Transform Wrapper */}
       <div
         ref={wrapperRef}
         className={`w-full h-full transition-transform duration-300 origin-center ${
-            isSuperZoom ? 'scale-[2]' : 'scale-100'
+          isSuperZoom ? 'scale-[2]' : 'scale-100'
         } ${cursorClass}`}
         onClick={handleCanvasClick}
         onTouchEnd={handleTouchEnd}
@@ -391,9 +470,7 @@ const SatelliteCanvas: React.FC = () => {
 
             const isSelected = selectedLineId === line.id;
             const strokeColor = isSelected ? SELECTED_LINE_COLOR : getColorForPitch(line.pitch);
-
-            // Interaction Props based on Tool
-            const isClickable = selectedTool !== 'draw'; // In Draw mode, lines are ghosts
+            const isClickable = selectedTool !== 'draw';
 
             return (
               <Polyline
@@ -402,7 +479,7 @@ const SatelliteCanvas: React.FC = () => {
                 onClick={(e) => handleLineClick(e, line.id)}
                 onDblClick={(e) => handleLineDblClick(e, line.id)}
                 options={{
-                  strokeColor: strokeColor,
+                  strokeColor,
                   strokeOpacity: 1.0,
                   strokeWeight: isSelected ? 6 : 4,
                   zIndex: isSelected ? 100 : 1,
@@ -418,7 +495,7 @@ const SatelliteCanvas: React.FC = () => {
               key={node.id}
               position={node}
               onClick={(e) => handleNodeClick(e, node.id)}
-              draggable={selectedTool === 'select'} // Drag to reposition in select mode
+              draggable={selectedTool === 'select'}
               onDragEnd={(e) => handleNodeDragEnd(e, node.id)}
               icon={{
                 path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
@@ -426,11 +503,10 @@ const SatelliteCanvas: React.FC = () => {
                 fillOpacity: 1,
                 strokeColor: '#1f3d2c',
                 strokeWeight: 1,
-                // On touch devices use scale 8 so the visual circle is large enough
-                // to see AND the Google Maps hit target is wide enough for fingers.
-                // On desktop keep the existing compact sizes.
+                // BUG 3 fix: scale 4 on touch (was 8) — visible but precise.
+                // The 36px touch target in handleTouchStart covers finger accuracy.
                 scale: isTouchDevice
-                  ? 8
+                  ? 4
                   : selectedTool === 'draw' ? 3 : 2,
               }}
               clickable={selectedTool === 'draw' || selectedTool === 'select'}
@@ -440,64 +516,67 @@ const SatelliteCanvas: React.FC = () => {
         </GoogleMap>
       </div>
 
-      {/* Touch placement crosshair — follows finger, committed on touchend */}
-      {pendingPlacement && (
+      {/* Trackpad cursor overlay — draw + edit modes, touch only */}
+      {showTrackpadCursor && (
         <div
           className="absolute pointer-events-none z-50"
           style={{
-            left: pendingPlacement.x,
-            top: pendingPlacement.y,
+            left: cursorPos.x,
+            top: cursorPos.y,
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {/* Outer ring — large so the finger doesn't obscure the target */}
+          {/* Outer ring */}
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              border: '2px solid rgba(247,243,234,0.7)',
               position: 'absolute',
+              width: 16,
+              height: 16,
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              border: `1.5px solid ${cursorGrabbed ? '#f97316' : cursorLocked ? '#fb923c' : 'rgba(255,255,255,0.9)'}`,
+              boxShadow: '0 0 4px rgba(0,0,0,0.7)',
             }}
           />
-          {/* Inner dot */}
+          {/* Center dot */}
           <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: '#f7f3ea',
               position: 'absolute',
+              width: cursorLocked || cursorGrabbed ? 5 : 3,
+              height: cursorLocked || cursorGrabbed ? 5 : 3,
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              background: cursorGrabbed ? '#f97316' : cursorLocked ? '#fb923c' : 'rgba(255,255,255,0.95)',
             }}
           />
           {/* Horizontal arm */}
           <div
             style={{
-              width: 40,
-              height: 1,
-              background: 'rgba(247,243,234,0.8)',
               position: 'absolute',
+              width: 20,
+              height: 1,
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              background: cursorGrabbed ? '#f97316' : 'rgba(255,255,255,0.7)',
+              boxShadow: '0 0 2px rgba(0,0,0,0.6)',
             }}
           />
           {/* Vertical arm */}
           <div
             style={{
-              width: 1,
-              height: 40,
-              background: 'rgba(247,243,234,0.8)',
               position: 'absolute',
+              width: 1,
+              height: 20,
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              background: cursorGrabbed ? '#f97316' : 'rgba(255,255,255,0.7)',
+              boxShadow: '0 0 2px rgba(0,0,0,0.6)',
             }}
           />
         </div>
@@ -518,21 +597,34 @@ const SatelliteCanvas: React.FC = () => {
               color: 'var(--color-accent)',
             }}
           >
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
-             <span>Double-click lines to select</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
+            <span>Double-click lines to select</span>
           </div>
         )}
         {selectedTool === 'draw' && (
-           <div
-             className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
-             style={{
-               background: 'rgba(15,25,40,0.92)',
-               border: '1px solid rgba(58,99,73,0.42)',
-               color: '#d9e8de',
-             }}
-           >
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
-             <span>Click map to add points</span>
+          <div
+            className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+            style={{
+              background: 'rgba(15,25,40,0.92)',
+              border: '1px solid rgba(58,99,73,0.42)',
+              color: '#d9e8de',
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+            <span>Slide to aim — tap to place</span>
+          </div>
+        )}
+        {selectedTool === 'edit' && (
+          <div
+            className="text-lg font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3"
+            style={{
+              background: 'rgba(15,25,40,0.92)',
+              border: '1px solid rgba(14,165,233,0.42)',
+              color: '#7dd3fc',
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+            <span>Slide to aim — tap node to move</span>
           </div>
         )}
       </div>

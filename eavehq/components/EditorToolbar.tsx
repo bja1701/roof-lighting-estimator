@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pencil, MousePointer, ZoomIn, Undo2, Redo2, CheckCheck } from 'lucide-react';
+import { Pencil, MousePointer, ZoomIn, Undo2, Redo2, CheckCheck, Move } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 
 const EditorToolbar: React.FC = () => {
@@ -30,6 +30,7 @@ const EditorToolbar: React.FC = () => {
         setSelectedTool('select');
         setActiveDrawNode(null);
       }
+      if (key === 'n') setSelectedTool('edit');
       if (key === 'z') toggleSuperZoom();
       if (key === 'e') setActiveDrawNode(null);
       if (key === 'delete' || key === 'backspace') {
@@ -69,6 +70,15 @@ const EditorToolbar: React.FC = () => {
       onClick: () => setSelectedTool('select'),
       active: selectedTool === 'select',
       activeColor: 'var(--color-primary)',
+    },
+    {
+      id: 'edit',
+      Icon: Move,
+      label: 'Edit',
+      shortcut: 'N',
+      onClick: () => setSelectedTool('edit'),
+      active: selectedTool === 'edit',
+      activeColor: '#0ea5e9',
     },
     {
       id: 'zoom',

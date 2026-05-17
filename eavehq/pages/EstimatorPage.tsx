@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar';
 import PricingPanel from '../components/PricingPanel';
 import EditorToolbar from '../components/EditorToolbar';
 import SaveToJobModal from '../components/SaveToJobModal';
+import PitchAssignSheet from '../components/PitchAssignSheet';
 
 const EstimatorPage: React.FC = () => {
   const navigate = useNavigate();
@@ -93,13 +94,14 @@ const EstimatorPage: React.FC = () => {
       <MapWrapper>
         {/* Header */}
         <header
-          className="h-14 flex-none flex items-center justify-between px-4 z-50 relative"
+          className="h-14 flex-none flex items-center justify-between gap-2 px-2 sm:px-4 z-50 relative"
           style={{ background: 'var(--color-primary-dark)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
         >
-          <div className="flex items-center gap-3 flex-none min-w-0 w-[220px]">
+          {/* Left: back + logo — fixed width, no shrink */}
+          <div className="flex items-center gap-1 sm:gap-3 flex-none">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center justify-center gap-1 min-w-[40px] min-h-[40px] px-1.5 sm:px-2 py-1.5 rounded-lg transition-colors text-sm font-medium"
               style={{ color: 'rgba(255,255,255,0.6)' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
@@ -109,7 +111,7 @@ const EstimatorPage: React.FC = () => {
               <span className="hidden sm:block">Jobs</span>
             </button>
 
-            <div className="flex items-center gap-2 pl-1">
+            <div className="hidden sm:flex items-center gap-2">
               <div
                 className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{ background: 'var(--color-accent)' }}
@@ -128,14 +130,16 @@ const EstimatorPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex justify-center px-4 max-w-xl min-w-0">
+          {/* Center: search — takes remaining space, min-w-0 prevents blowout */}
+          <div className="flex-1 flex justify-center min-w-0 px-1 sm:px-4">
             <SearchBar />
           </div>
 
-          <div className="flex gap-2 items-center flex-none">
+          {/* Right: action buttons — fixed, no shrink, no overflow */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-none">
             <button
               onClick={reset}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+              className="flex items-center justify-center min-w-[40px] min-h-[40px] px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
               style={{ color: 'rgba(255,100,100,0.8)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,100,100,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -146,7 +150,7 @@ const EstimatorPage: React.FC = () => {
             <button
               onClick={() => setShowSaveModal(true)}
               disabled={saveDisabled}
-              className="px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95"
+              className="flex items-center justify-center min-w-[40px] min-h-[40px] px-2 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 whitespace-nowrap"
               style={{
                 background: saveDisabled ? 'rgba(255,255,255,0.12)' : 'var(--color-accent)',
                 color: saveDisabled ? 'rgba(255,255,255,0.35)' : '#fff',
@@ -154,7 +158,9 @@ const EstimatorPage: React.FC = () => {
                 fontFamily: 'var(--font-display)',
               }}
             >
-              Save Estimate
+              {/* Short label on xs, full label on sm+ */}
+              <span className="sm:hidden">Save</span>
+              <span className="hidden sm:inline">Save Estimate</span>
             </button>
           </div>
         </header>
@@ -210,6 +216,9 @@ const EstimatorPage: React.FC = () => {
           onClose={() => setShowSaveModal(false)}
         />
       )}
+
+      {/* Pitch assign sheet — appears when a line is selected on mobile */}
+      <PitchAssignSheet onGoToPitchView={() => setMobileView('pitch')} />
     </div>
   );
 };
