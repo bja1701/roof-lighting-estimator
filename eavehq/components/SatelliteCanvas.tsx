@@ -66,6 +66,10 @@ const SatelliteCanvas: React.FC = () => {
   // Wrapper ref for native (non-passive) touch listeners
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // Cached bounding rect — refreshed at touchstart from the map div so coordinates
+  // stay accurate near screen edges and don't go stale during a gesture.
+  const rectRef = useRef<DOMRect | null>(null);
+
   // Detect touch device at mount; switches gestureHandling to 'cooperative' so
   // normal map pan still works when no node is grabbed.
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -144,7 +148,7 @@ const SatelliteCanvas: React.FC = () => {
   /**
    * LINE INTERACTION HANDLERS
    */
-  
+
   // Single Click on Line
   const handleLineClick = (e: any, lineId: string) => {
     if (isSuperZoom) return;
@@ -177,7 +181,7 @@ const SatelliteCanvas: React.FC = () => {
 
   // Node Click (for connecting lines in Draw Mode)
   const handleNodeClick = (e: any, nodeId: string) => {
-    if (e.stop) e.stop(); 
+    if (e.stop) e.stop();
     if (isSuperZoom) return;
 
     // Only allow linking in Draw mode
@@ -198,6 +202,13 @@ const SatelliteCanvas: React.FC = () => {
   // B2: useCallback makes these stable references for the useEffect dependency array.
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Refresh bounding rect at the start of every gesture from the map div — this gives
+    // accurate coords near screen edges and avoids stale values after scroll/resize.
+    const mapDiv = (mapRef.current as any)?.getDiv?.() as HTMLElement | undefined;
+    rectRef.current = mapDiv?.getBoundingClientRect()
+      ?? wrapperRef.current?.getBoundingClientRect()
+      ?? null;
+
     if (isSuperZoom) return;
 
     // Two-finger gesture = pinch/pan — never intercept, let the map handle it.
@@ -205,9 +216,8 @@ const SatelliteCanvas: React.FC = () => {
 
     if (!overlayProjection) return;
     const touch = e.touches[0];
-    const el = wrapperRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+    if (!rectRef.current) return;
+    const rect = rectRef.current;
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     const win = window as any;
@@ -251,19 +261,21 @@ const SatelliteCanvas: React.FC = () => {
     if (isSuperZoom) return;
     if (e.touches.length > 1) return; // pinch in progress — don't interfere
 
-    const el = wrapperRef.current;
-    if (!el) return;
+    if (!rectRef.current) return;
     const touch = e.touches[0];
-    const rect = el.getBoundingClientRect();
+    const rect = rectRef.current;
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     const win = window as any;
     if (!win.google || !win.google.maps) return;
 
     if (capturedNodeId.current && overlayProjection) {
-      // Dragging an existing node
+      // Dragging an existing node — apply SuperZoom scale correction
       e.preventDefault();
-      const point = new win.google.maps.Point(x, y);
+      const scaleFactor = isSuperZoom ? 2 : 1;
+      const correctedX = x / scaleFactor;
+      const correctedY = y / scaleFactor;
+      const point = new win.google.maps.Point(correctedX, correctedY);
       const latLng = overlayProjection.fromContainerPixelToLatLng(point);
       if (latLng) {
         updateNodePosition(capturedNodeId.current, latLng.lat(), latLng.lng());
@@ -296,11 +308,15 @@ const SatelliteCanvas: React.FC = () => {
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent<HTMLDivElement>) => {
     // Commit a pending placement: convert final pixel position → LatLng → addNode
+    // Apply SuperZoom scale correction so placement is accurate at 2× scale.
     if (pendingPlacementRef.current !== null && overlayProjection) {
       const { x, y } = pendingPlacementRef.current;
       const win = window as any;
       if (win.google && win.google.maps) {
-        const point = new win.google.maps.Point(x, y);
+        const scaleFactor = isSuperZoom ? 2 : 1;
+        const correctedX = x / scaleFactor;
+        const correctedY = y / scaleFactor;
+        const point = new win.google.maps.Point(correctedX, correctedY);
         const latLng = overlayProjection.fromContainerPixelToLatLng(point);
         if (latLng) {
           pushUndo();
@@ -319,7 +335,7 @@ const SatelliteCanvas: React.FC = () => {
     }
 
     capturedNodeId.current = null;
-  }, [overlayProjection, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
+  }, [overlayProjection, isSuperZoom, pushUndo, addNode, activeDrawNodeId, addLine, setActiveDrawNode]);
 
   const activeCenter = nodes.length > 0 ? nodes[nodes.length - 1] : satelliteCenter;
 
@@ -335,9 +351,9 @@ const SatelliteCanvas: React.FC = () => {
 
   return (
     <div className="relative w-full h-full overflow-hidden group" style={{ background: 'rgba(15,25,40,0.98)' }}>
-      
-      {/* 
-         The Transform Wrapper 
+
+      {/*
+         The Transform Wrapper
       */}
       <div
         ref={wrapperRef}
@@ -375,7 +391,7 @@ const SatelliteCanvas: React.FC = () => {
 
             const isSelected = selectedLineId === line.id;
             const strokeColor = isSelected ? SELECTED_LINE_COLOR : getColorForPitch(line.pitch);
-            
+
             // Interaction Props based on Tool
             const isClickable = selectedTool !== 'draw'; // In Draw mode, lines are ghosts
 
@@ -390,7 +406,7 @@ const SatelliteCanvas: React.FC = () => {
                   strokeOpacity: 1.0,
                   strokeWeight: isSelected ? 6 : 4,
                   zIndex: isSelected ? 100 : 1,
-                  clickable: isClickable, 
+                  clickable: isClickable,
                 }}
               />
             );
@@ -423,7 +439,7 @@ const SatelliteCanvas: React.FC = () => {
           ))}
         </GoogleMap>
       </div>
-      
+
       {/* Touch placement crosshair — follows finger, committed on touchend */}
       {pendingPlacement && (
         <div
@@ -488,7 +504,7 @@ const SatelliteCanvas: React.FC = () => {
       )}
 
       {/* Centered Helper Notification */}
-      <div 
+      <div
         className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none transition-opacity duration-500 ease-out ${
           showHelper ? 'opacity-100' : 'opacity-0'
         }`}
@@ -520,7 +536,7 @@ const SatelliteCanvas: React.FC = () => {
           </div>
         )}
       </div>
-      
+
     </div>
   );
 };

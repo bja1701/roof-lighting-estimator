@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { useProfile } from '../hooks/useProfile';
 import MapWrapper from '../components/MapWrapper';
@@ -22,7 +22,9 @@ const EstimatorPage: React.FC = () => {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
-  const [isPitchPanelCollapsed, setIsPitchPanelCollapsed] = useState(false);
+  // Mobile: toggle between satellite canvas and pitch/pricing panel.
+  // On lg+ both panels are always visible side-by-side.
+  const [mobileView, setMobileView] = useState<'satellite' | 'pitch'>('satellite');
   const pitchPaneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -160,30 +162,43 @@ const EstimatorPage: React.FC = () => {
         {/* Main Workspace */}
         <main className="flex-1 flex overflow-hidden relative z-0">
           <div className="w-full h-full flex flex-col lg:flex-row">
+            {/* Satellite canvas panel */}
             <div
-              className="order-1 group relative min-w-[300px] h-[55vh] lg:h-auto lg:flex-1"
+              className={`order-1 group relative min-w-[300px] lg:flex-1 ${
+                mobileView === 'pitch' ? 'hidden lg:flex lg:flex-col' : ''
+              } h-[calc(100dvh-3.5rem)] lg:h-auto`}
               style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
             >
               <SatelliteCanvas />
               <EditorToolbar />
+              {/* Mobile toggle button — tap to switch to pitch/pricing panel */}
+              <button
+                className="absolute top-2 right-2 z-50 lg:hidden rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                style={{ background: 'rgba(255,255,255,0.9)', color: '#111', backdropFilter: 'blur(4px)', border: '1px solid rgba(0,0,0,0.12)' }}
+                onClick={() => setMobileView('pitch')}
+              >
+                Pitch View
+              </button>
             </div>
+
+            {/* Pitch / pricing panel */}
             <div
               ref={pitchPaneRef}
-              className={`order-2 lg:h-full flex-[1.8] min-w-[300px] z-10 relative transition-all duration-200 overflow-hidden ${
-                isPitchPanelCollapsed ? 'h-10' : 'h-[45vh]'
-              } lg:h-full`}
+              className={`order-2 flex-[1.8] min-w-[300px] z-10 relative ${
+                mobileView === 'satellite' ? 'hidden lg:flex lg:flex-col' : ''
+              } h-[calc(100dvh-3.5rem)] lg:h-full`}
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
             >
-              <button
-                className="lg:hidden absolute top-0 right-0 z-20 flex items-center gap-1 px-3 h-10 text-xs font-medium"
-                style={{ color: 'rgba(255,255,255,0.6)' }}
-                onClick={() => setIsPitchPanelCollapsed((v) => !v)}
-                aria-label={isPitchPanelCollapsed ? 'Expand panel' : 'Collapse panel'}
-              >
-                {isPitchPanelCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
               <VisualPitchTool />
               <PricingPanel dockRef={pitchPaneRef} />
+              {/* Mobile back button */}
+              <button
+                className="absolute top-2 left-2 z-50 lg:hidden rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm"
+                style={{ background: 'rgba(255,255,255,0.9)', color: '#111', backdropFilter: 'blur(4px)', border: '1px solid rgba(0,0,0,0.12)' }}
+                onClick={() => setMobileView('satellite')}
+              >
+                ← Satellite
+              </button>
             </div>
           </div>
         </main>

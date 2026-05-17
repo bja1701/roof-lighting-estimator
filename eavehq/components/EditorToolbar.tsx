@@ -109,7 +109,7 @@ const EditorToolbar: React.FC = () => {
   ];
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0">
+    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0 max-w-[calc(100vw-1rem)] overflow-x-auto">
       <div
         className="flex items-center gap-1 p-1.5 rounded-2xl"
         style={{
@@ -123,7 +123,7 @@ const EditorToolbar: React.FC = () => {
             key={id}
             onClick={onClick}
             title={`${label} (${shortcut})`}
-            className="relative group/btn p-3 rounded-xl transition-all duration-150 active:scale-95"
+            className="relative group/btn p-2 sm:p-3 rounded-xl transition-all duration-150 active:scale-95"
             style={
               active
                 ? { background: activeColor, color: '#fff', boxShadow: `0 4px 12px ${activeColor}55` }
@@ -132,7 +132,7 @@ const EditorToolbar: React.FC = () => {
             onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
           >
-            <Icon size={18} />
+            <Icon size={16} />
             <span
               className="absolute -top-9 left-1/2 -translate-x-1/2 text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity"
               style={{ background: 'rgba(15,25,40,0.96)', color: '#f7f3ea' }}
@@ -150,12 +150,12 @@ const EditorToolbar: React.FC = () => {
             onClick={onClick}
             disabled={disabled}
             title={`${label} (${shortcut})`}
-            className="relative group/btn p-3 rounded-xl transition-all duration-150 active:scale-95 disabled:cursor-not-allowed"
+            className="relative group/btn p-2 sm:p-3 rounded-xl transition-all duration-150 active:scale-95 disabled:cursor-not-allowed"
             style={{ color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.45)' }}
             onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={e => { if (!disabled) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
           >
-            <Icon size={18} />
+            <Icon size={16} />
             <span
               className="absolute -top-9 left-1/2 -translate-x-1/2 text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity"
               style={{ background: 'rgba(15,25,40,0.96)', color: '#f7f3ea' }}
