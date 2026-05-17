@@ -1,24 +1,24 @@
-// Standard Pitch Colors for visual feedback
+// Standard Pitch Colors for visual feedback — pitch application zones are purple
 export const PITCH_COLORS: Record<string, string> = {
-  "0/12": "#c084fc", // Bright Purple (Flat/Eave) - High visibility
-  "1/12": "#c084fc",
-  "2/12": "#facc15", // Yellow (Low)
-  "3/12": "#facc15",
-  "4/12": "#fbbf24", // Amber
-  "5/12": "#fbbf24",
-  "6/12": "#f97316", // Orange (Medium)
-  "7/12": "#f97316",
-  "8/12": "#ea580c", // Red-Orange
-  "9/12": "#dc2626", // Red (Steep)
-  "10/12": "#dc2626",
-  "11/12": "#991b1b", // Dark Red
-  "12/12": "#7f1d1d", // Very Dark Red
-  "14/12": "#450a0a",
-  "16/12": "#450a0a",
-  "18/12": "#450a0a",
+  "0/12": "#a855f7", // Purple
+  "1/12": "#a855f7",
+  "2/12": "#a855f7",
+  "3/12": "#a855f7",
+  "4/12": "#a855f7",
+  "5/12": "#a855f7",
+  "6/12": "#a855f7",
+  "7/12": "#a855f7",
+  "8/12": "#a855f7",
+  "9/12": "#a855f7",
+  "10/12": "#a855f7",
+  "11/12": "#a855f7",
+  "12/12": "#a855f7",
+  "14/12": "#a855f7",
+  "16/12": "#a855f7",
+  "18/12": "#a855f7",
 };
 
-export const DEFAULT_LINE_COLOR = "#ef4444"; // Red (Unassigned/New)
+export const DEFAULT_LINE_COLOR = "#ef4444"; // Bright Red (Measurement/Outline — unassigned)
 export const SELECTED_LINE_COLOR = "#22c55e"; // Bright Green
 
 /**

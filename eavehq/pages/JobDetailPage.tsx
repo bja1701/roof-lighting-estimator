@@ -308,8 +308,6 @@ export default function JobDetailPage() {
     navigate('/estimator');
   };
 
-  const totalValue = quotes.reduce((sum, q) => sum + (q.total_price ?? 0), 0);
-  const totalFt    = quotes.reduce((sum, q) => sum + (q.total_linear_ft ?? 0), 0);
   const canEstimate = !isFreeTierEstimatorExhausted(profile);
 
   if (loading) {
@@ -578,32 +576,6 @@ export default function JobDetailPage() {
                 <ArrowRight size={12} />
               </a>
             )}
-          </div>
-        )}
-
-        {/* Stats — only shown when there are estimates */}
-        {quotes.length > 0 && (
-          <div
-            className="grid grid-cols-3 gap-px mb-8 rounded-xl overflow-hidden"
-            style={{ background: 'var(--color-border)' }}
-          >
-            {[
-              { label: 'Estimates', value: String(quotes.length) },
-              { label: 'Total Value', value: `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-              { label: 'Linear Ft', value: `${totalFt.toFixed(0)} ft` },
-            ].map(({ label, value }) => (
-              <div key={label} className="px-5 py-4" style={{ background: 'var(--color-card)' }}>
-                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-slate)' }}>
-                  {label}
-                </p>
-                <p
-                  className="text-xl font-bold"
-                  style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-ink)' }}
-                >
-                  {value}
-                </p>
-              </div>
-            ))}
           </div>
         )}
 
