@@ -36,13 +36,19 @@
 
 html, body {
   height: 100%;
+}
+
+#root {
+  height: 100%;
+}
+
+body.estimator-active {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: auto;
 }
 
-#root {
-  height: 100%;
+body.estimator-active #root {
   overflow: hidden;
 }
 

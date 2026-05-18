@@ -727,52 +727,88 @@ export default function ScheduleCalendarPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pb-20 pt-8">
 
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h1
-            className="text-3xl font-black tracking-tight"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
-          >
-            Schedule
-          </h1>
-
-          <div className="flex items-center gap-2">
-            {gcalLoading && <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-slate)' }} />}
-
-            {/* Navigation */}
-            <button
-              type="button"
-              onClick={goBack}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
+        <div className="mb-5">
+          {/* Row 1: title (left) + nav controls (right) */}
+          <div className="flex items-center justify-between gap-2">
+            <h1
+              className="text-3xl font-black tracking-tight"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-ink)' }}
             >
-              <ChevronLeft size={16} />
-            </button>
-            <span
-              className="text-sm font-semibold min-w-[160px] text-center"
-              style={{ color: 'var(--color-ink)' }}
-            >
-              {titleLabel}
-            </span>
-            <button
-              type="button"
-              onClick={goForward}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
-            >
-              <ChevronRight size={16} />
-            </button>
+              Schedule
+            </h1>
 
-            {/* Today */}
-            <button
-              type="button"
-              onClick={goToday}
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-              style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
-            >
-              Today
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {gcalLoading && <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-slate)' }} />}
 
-            {/* Refresh GCal */}
+              {/* Navigation */}
+              <button
+                type="button"
+                onClick={goBack}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span
+                className="text-sm font-semibold text-center min-w-[120px] sm:min-w-[160px]"
+                style={{ color: 'var(--color-ink)' }}
+              >
+                {titleLabel}
+              </span>
+              <button
+                type="button"
+                onClick={goForward}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
+              >
+                <ChevronRight size={16} />
+              </button>
+
+              {/* Today */}
+              <button
+                type="button"
+                onClick={goToday}
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
+              >
+                Today
+              </button>
+
+              {/* Refresh GCal + view toggle: hidden on mobile, shown sm+ inline */}
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void fetchGcal()}
+                  title="Refresh Google Calendar"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--color-slate)', border: '1px solid var(--color-border)', background: 'var(--color-card)' }}
+                >
+                  <RefreshCw size={14} />
+                </button>
+
+                <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+                  {(['week', 'month'] as CalView[]).map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { setView(v); setPopover(null); }}
+                      className="px-4 py-1.5 text-sm font-semibold capitalize transition-colors"
+                      style={
+                        view === v
+                          ? { background: 'var(--color-primary)', color: '#fff' }
+                          : { background: 'var(--color-card)', color: 'var(--color-slate)' }
+                      }
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2 (mobile only): Refresh GCal + view toggle */}
+          <div className="flex sm:hidden items-center justify-end gap-2 mt-2">
             <button
               type="button"
               onClick={() => void fetchGcal()}
@@ -783,7 +819,6 @@ export default function ScheduleCalendarPage() {
               <RefreshCw size={14} />
             </button>
 
-            {/* View toggle */}
             <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
               {(['week', 'month'] as CalView[]).map(v => (
                 <button
