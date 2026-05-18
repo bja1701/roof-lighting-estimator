@@ -158,7 +158,6 @@ const PricingPanel: React.FC = () => {
           background: 'rgba(15,25,40,0.94)',
           borderTop: '1px solid rgba(255,255,255,0.12)',
           boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
-          paddingBottom: 'env(safe-area-inset-bottom, 10px)',
         }}
       >
         {/* Left: total */}

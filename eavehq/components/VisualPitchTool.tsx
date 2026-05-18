@@ -254,7 +254,7 @@ const VisualPitchTool: React.FC = () => {
       </div>
 
       {/* 3. Controls Area — flex-none, compact, always visible, target ≤200px tall */}
-      <div className="relative z-30 flex-none flex flex-col gap-2 border-t border-inverse-on-surface/15 bg-inverse-surface p-2 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="relative z-30 flex-none flex flex-col gap-2 border-t border-inverse-on-surface/15 bg-inverse-surface p-2 shadow-[0_-4px_24px_rgba(17,28,45,0.35)]">
 
         {/* Sliders Grid */}
         <div className="grid grid-cols-1 gap-2">

@@ -173,7 +173,7 @@ const EstimatorPage: React.FC = () => {
             <div
               className={`order-1 group relative min-w-[300px] lg:flex-1 flex flex-col ${
                 mobileView === 'pitch' ? 'hidden lg:flex lg:flex-col' : ''
-              } h-[calc(100dvh-3.5rem)] lg:h-auto`}
+              } h-[calc(100svh-3.5rem)] lg:h-auto`}
               style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
             >
               {/* Canvas fills remaining space */}
@@ -198,7 +198,7 @@ const EstimatorPage: React.FC = () => {
               ref={pitchPaneRef}
               className={`order-2 flex-[1.8] min-w-[300px] z-10 relative ${
                 mobileView === 'satellite' ? 'hidden lg:flex lg:flex-col' : ''
-              } h-[calc(100dvh-3.5rem)] lg:h-full`}
+              } h-[calc(100svh-3.5rem)] lg:h-full`}
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
             >
               <VisualPitchTool />
