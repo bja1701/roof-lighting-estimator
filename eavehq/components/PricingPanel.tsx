@@ -153,11 +153,12 @@ const PricingPanel: React.FC = () => {
 
       {/* Pinned bottom bar */}
       <div
-        className="w-full flex items-center justify-between px-4 py-2.5"
+        className="w-full flex items-center justify-between px-4 pt-2.5"
         style={{
           background: 'rgba(15,25,40,0.94)',
           borderTop: '1px solid rgba(255,255,255,0.12)',
           boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+          paddingBottom: 'env(safe-area-inset-bottom, 10px)',
         }}
       >
         {/* Left: total */}

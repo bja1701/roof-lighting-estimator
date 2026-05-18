@@ -208,7 +208,7 @@ const EstimatorPage: React.FC = () => {
                 style={{ background: 'rgba(255,255,255,0.9)', color: '#111', backdropFilter: 'blur(4px)', border: '1px solid rgba(0,0,0,0.12)' }}
                 onClick={() => setMobileView('satellite')}
               >
-                ← Satellite
+                Satellite
               </button>
             </div>
           </div>
