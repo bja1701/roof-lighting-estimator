@@ -64,12 +64,8 @@ const EstimatorPage: React.FC = () => {
   }, [undo, redo]);
 
   useEffect(() => {
-    // Always start with a blank canvas. This prevents traces from a previous
-    // job bleeding into the current job when the store (a Zustand singleton)
-    // still holds the last session's nodes/lines.
     reset();
 
-    // --- Step 1: peek at sessionStorage to learn the jobId (don't consume yet) ---
     const stored = sessionStorage.getItem('restore_quote');
     let jobIdFromSession: string | null = null;
     let canvasStateFromSession: any = null;
@@ -83,17 +79,13 @@ const EstimatorPage: React.FC = () => {
       sessionStorage.removeItem('restore_quote');
     }
 
-    // --- Step 2: restore from localStorage draft (keyed by jobId) ---
+    // localStorage draft is the refresh-recovery fallback; session state overwrites it
     if (jobIdFromSession) {
       const localDraft = readLocalDraft(jobIdFromSession);
       if (localDraft) restoreCanvas(localDraft);
     }
-
-    // --- Step 3: sessionStorage quote restore overwrites local draft ---
-    // (Explicit quote edits always win over auto-draft.)
     if (canvasStateFromSession) restoreCanvas(canvasStateFromSession);
 
-    // --- Step 4: activate autosave for this jobId ---
     if (jobIdFromSession) setCurrentJobId(jobIdFromSession);
   }, []);
 

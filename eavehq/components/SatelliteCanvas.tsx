@@ -84,6 +84,9 @@ const SatelliteCanvas: React.FC = () => {
   const grabbedNodeRef = useRef<string | null>(null);
   const [grabbedNode, setGrabbedNode] = useState<string | null>(null);
 
+  // Custom double-tap detection for line selection (gestureHandling:'greedy' swallows onDblClick in select mode)
+  const lastLineTapRef = useRef<{ lineId: string; t: number } | null>(null);
+
   // Detect touch device at mount
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
@@ -200,18 +203,22 @@ const SatelliteCanvas: React.FC = () => {
 
   /**
    * LINE INTERACTION HANDLERS
+   * Double-tap is detected manually here because gestureHandling:'greedy' consumes
+   * the native dblclick event before it reaches the Polyline handler on mobile.
    */
-  const handleLineClick = (e: any, _lineId: string) => {
+  const DOUBLE_TAP_MS = 350;
+  const handleLineClick = (e: any, lineId: string) => {
     if (isSuperZoom) return;
     if (selectedTool === 'select') {
       if (e.domEvent) e.domEvent.stopPropagation();
-    }
-  };
-
-  const handleLineDblClick = (e: any, lineId: string) => {
-    if (selectedTool === 'select') {
-      selectLine(lineId);
-      if (e.domEvent) e.domEvent.stopPropagation();
+      const now = Date.now();
+      const last = lastLineTapRef.current;
+      if (last && last.lineId === lineId && now - last.t < DOUBLE_TAP_MS) {
+        selectLine(lineId);
+        lastLineTapRef.current = null;
+      } else {
+        lastLineTapRef.current = { lineId, t: now };
+      }
     }
   };
 
@@ -468,7 +475,6 @@ const SatelliteCanvas: React.FC = () => {
                 key={line.id}
                 path={[start, end]}
                 onClick={(e) => handleLineClick(e, line.id)}
-                onDblClick={(e) => handleLineDblClick(e, line.id)}
                 options={{
                   strokeColor,
                   strokeOpacity: 1.0,

@@ -10,10 +10,6 @@ function localKey(jobId: string) {
   return `canvas_draft_${jobId}`;
 }
 
-/**
- * Builds the snapshot object written to localStorage / Supabase.
- * Mirrors the shape restoreCanvas() already understands.
- */
 function buildSnapshot(state: ReturnType<typeof useEstimatorStore.getState>) {
   return {
     nodes: state.nodes,
@@ -26,10 +22,6 @@ function buildSnapshot(state: ReturnType<typeof useEstimatorStore.getState>) {
   };
 }
 
-/**
- * Reads the persisted draft for a given jobId from localStorage.
- * Returns null if nothing is stored or the value fails to parse.
- */
 export function readLocalDraft(jobId: string): object | null {
   try {
     const raw = localStorage.getItem(localKey(jobId));
@@ -40,54 +32,36 @@ export function readLocalDraft(jobId: string): object | null {
   }
 }
 
-/**
- * Removes the local draft for a jobId.
- * Call this after a quote is formally saved so stale draft doesn't re-appear.
- */
 export function clearLocalDraft(jobId: string) {
   localStorage.removeItem(localKey(jobId));
 }
 
-/**
- * useCanvasAutosave
- *
- * Subscribes to the estimator store.  Whenever nodes or lines change:
- *  1. Writes to localStorage immediately (synchronous, keyed by jobId).
- *  2. After DEBOUNCE_MS of inactivity, attempts a Supabase PATCH on jobs.canvas_draft.
- *     Supabase save is best-effort — network failure is silently ignored.
- *
- * Returns the current SaveStatus for the UI indicator.
- *
- * @param jobId  The current job UUID, or null if the estimator is open without a job context.
- */
 export function useCanvasAutosave(jobId: string | null): SaveStatus {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether there's actually been a change worth saving (skip the initial mount).
   const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!jobId) return;
 
     const unsubscribe = useEstimatorStore.subscribe((state) => {
-      // Skip the very first emission that fires on subscription (no user change yet).
+      // Skip the very first emission on subscription (no user change yet)
       if (!initializedRef.current) {
         initializedRef.current = true;
         return;
       }
 
+      // Skip saving when the store is empty (just after reset())
+      if (state.nodes.length === 0 && state.lines.length === 0) return;
+
       const snapshot = buildSnapshot(state);
 
-      // 1. Synchronous localStorage write — always succeeds.
       try {
         localStorage.setItem(localKey(jobId), JSON.stringify(snapshot));
-      } catch {
-        // Storage quota exceeded — skip silently.
-      }
+      } catch {}
 
       setStatus('saving');
 
-      // 2. Debounced Supabase write.
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         try {
@@ -95,9 +69,7 @@ export function useCanvasAutosave(jobId: string | null): SaveStatus {
             .from('jobs')
             .update({ canvas_draft: snapshot })
             .eq('id', jobId);
-        } catch {
-          // Network error — localStorage already has the draft, so no data loss.
-        }
+        } catch {}
         setStatus('saved');
       }, DEBOUNCE_MS);
     });
