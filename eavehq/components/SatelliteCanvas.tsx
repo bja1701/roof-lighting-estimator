@@ -4,6 +4,15 @@ import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { getColorForPitch, SELECTED_LINE_COLOR } from '../utils/pitchColors';
 
+/** Perpendicular distance from point P to line segment AB, in pixels. */
+function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
 // Trackpad cursor position in canvas pixel space
 interface CursorPos {
   x: number;
@@ -84,8 +93,8 @@ const SatelliteCanvas: React.FC = () => {
   const grabbedNodeRef = useRef<string | null>(null);
   const [grabbedNode, setGrabbedNode] = useState<string | null>(null);
 
-  // Custom double-tap detection for line selection (gestureHandling:'greedy' swallows onDblClick in select mode)
-  const lastLineTapRef = useRef<{ lineId: string; t: number } | null>(null);
+  // Native double-tap tracking for line selection in select mode (gestureHandling:'greedy' swallows onDblClick on mobile)
+  const lastSelectTapRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   // Detect touch device at mount
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -203,22 +212,21 @@ const SatelliteCanvas: React.FC = () => {
 
   /**
    * LINE INTERACTION HANDLERS
-   * Double-tap is detected manually here because gestureHandling:'greedy' consumes
-   * the native dblclick event before it reaches the Polyline handler on mobile.
+   * Desktop: onDblClick on Polyline works fine (mouse events unaffected by gestureHandling).
+   * Mobile: double-tap is detected natively in handleTouchEnd via pixel hit-test,
+   * because gestureHandling:'greedy' intercepts the second tap before it reaches onDblClick.
    */
-  const DOUBLE_TAP_MS = 350;
-  const handleLineClick = (e: any, lineId: string) => {
+  const handleLineClick = (e: any, _lineId: string) => {
     if (isSuperZoom) return;
+    // Stop propagation so handleCanvasClick doesn't also fire (which would deselect)
+    if (selectedTool === 'select' && e.domEvent) e.domEvent.stopPropagation();
+  };
+
+  const handleLineDblClick = (e: any, lineId: string) => {
+    // Desktop double-click path (works because mouse events respect disableDoubleClickZoom)
     if (selectedTool === 'select') {
+      selectLine(lineId);
       if (e.domEvent) e.domEvent.stopPropagation();
-      const now = Date.now();
-      const last = lastLineTapRef.current;
-      if (last && last.lineId === lineId && now - last.t < DOUBLE_TAP_MS) {
-        selectLine(lineId);
-        lastLineTapRef.current = null;
-      } else {
-        lastLineTapRef.current = { lineId, t: now };
-      }
     }
   };
 
@@ -374,6 +382,53 @@ const SatelliteCanvas: React.FC = () => {
       touchMovedRef.current < TAP_MAX_MOVE &&
       Date.now() - touchStartRef.current.t < TAP_MAX_MS;
 
+    // --- Select mode: native double-tap hit-test for line selection ---
+    // gestureHandling:'greedy' intercepts double-tap for map zoom, so we detect it here
+    // using native touch coordinates rather than relying on Polyline's onDblClick.
+    if (selectedTool === 'select' && isTap && touchStartRef.current && rectRef.current) {
+      const tapX = touchStartRef.current.x - rectRef.current.left;
+      const tapY = touchStartRef.current.y - rectRef.current.top;
+      const now = Date.now();
+      const last = lastSelectTapRef.current;
+      const isDoubleTap = last !== null &&
+        (now - last.t) < 400 &&
+        Math.hypot(tapX - last.x, tapY - last.y) < 44;
+
+      if (isDoubleTap) {
+        // Hit-test: find the line segment closest to the tap
+        const win = window as any;
+        if (overlayProjection && win.google?.maps) {
+          const { lines: storeLines, nodes: storeNodes } = useEstimatorStore.getState();
+          let closestId: string | null = null;
+          let closestDist = 22; // px — generous for finger-sized targets
+          for (const line of storeLines) {
+            const s = storeNodes.find(n => n.id === line.startNodeId);
+            const e2 = storeNodes.find(n => n.id === line.endNodeId);
+            if (!s || !e2) continue;
+            const p1 = overlayProjection.fromLatLngToContainerPixel(
+              new win.google.maps.LatLng(s.lat, s.lng)
+            );
+            const p2 = overlayProjection.fromLatLngToContainerPixel(
+              new win.google.maps.LatLng(e2.lat, e2.lng)
+            );
+            if (!p1 || !p2) continue;
+            const dist = pointToSegmentDist(tapX, tapY, p1.x, p1.y, p2.x, p2.y);
+            if (dist < closestDist) { closestDist = dist; closestId = line.id; }
+          }
+          if (closestId) {
+            selectLine(closestId);
+            touchCommittedRef.current = true;
+          }
+        }
+        lastSelectTapRef.current = null;
+      } else {
+        // Single tap: deselect and record for potential double-tap
+        selectLine(null);
+        lastSelectTapRef.current = { x: tapX, y: tapY, t: now };
+        touchCommittedRef.current = true;
+      }
+    }
+
     // --- Draw mode tap: place node at cursor ---
     if (selectedTool === 'draw' && isTap && overlayProjection) {
       const { x, y } = cursorPosRef.current;
@@ -475,6 +530,7 @@ const SatelliteCanvas: React.FC = () => {
                 key={line.id}
                 path={[start, end]}
                 onClick={(e) => handleLineClick(e, line.id)}
+                onDblClick={(e) => handleLineDblClick(e, line.id)}
                 options={{
                   strokeColor,
                   strokeOpacity: 1.0,

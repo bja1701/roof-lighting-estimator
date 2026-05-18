@@ -39,19 +39,14 @@ export function clearLocalDraft(jobId: string) {
 export function useCanvasAutosave(jobId: string | null): SaveStatus {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!jobId) return;
 
     const unsubscribe = useEstimatorStore.subscribe((state) => {
-      // Skip the very first emission on subscription (no user change yet)
-      if (!initializedRef.current) {
-        initializedRef.current = true;
-        return;
-      }
-
-      // Skip saving when the store is empty (just after reset())
+      // Skip saving when the store is empty (right after reset())
+      // Zustand subscribe never fires immediately on subscribe — only on future changes,
+      // so there is no spurious "first emission" to skip.
       if (state.nodes.length === 0 && state.lines.length === 0) return;
 
       const snapshot = buildSnapshot(state);
@@ -77,7 +72,6 @@ export function useCanvasAutosave(jobId: string | null): SaveStatus {
     return () => {
       unsubscribe();
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      initializedRef.current = false;
     };
   }, [jobId]);
 
