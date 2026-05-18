@@ -194,10 +194,14 @@ const VisualPitchTool: React.FC = () => {
       >
         <MemoizedStreetView position={streetViewPosition} />
 
-        {/* 2. X-PROTRACTOR OVERLAY (SVG) — translated by overlayOffset */}
-        <svg
+        {/* 2. X-PROTRACTOR OVERLAY (SVG) — wrapper div pans via overlayOffset */}
+        <div
           className="absolute inset-0 w-full h-full z-10 pointer-events-none"
           style={{ transform: `translate(${overlayOffset.x}px, ${overlayOffset.y}px)` }}
+        >
+        <svg
+          className="w-full h-full pointer-events-none"
+          style={{ overflow: 'visible' }}
         >
 
           {/* Line 1: Reference (Yellow, Dashed) */}
@@ -228,6 +232,7 @@ const VisualPitchTool: React.FC = () => {
             <line x1="0" y1="-4" x2="0" y2="4" stroke="#263143" strokeWidth="1" />
           </g>
         </svg>
+        </div>
 
         {/* Draggable touch target centered at intersection — pans entire overlay */}
         <div
