@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { useProfile } from '../hooks/useProfile';
+import { useCanvasAutosave, readLocalDraft } from '../hooks/useCanvasAutosave';
 import MapWrapper from '../components/MapWrapper';
 import SatelliteCanvas from '../components/SatelliteCanvas';
 import VisualPitchTool from '../components/VisualPitchTool';
@@ -23,11 +24,14 @@ const EstimatorPage: React.FC = () => {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [savedJobId, setSavedJobId] = useState<string | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   // Mobile: toggle between satellite canvas and pitch/pricing panel.
   // On lg+ both panels are always visible side-by-side.
   const [mobileView, setMobileView] = useState<'satellite' | 'pitch'>('satellite');
   const pitchPaneRef = useRef<HTMLDivElement>(null);
   // pitchPaneRef kept for layout ref; PricingPanel no longer uses dockRef
+
+  const saveStatus = useCanvasAutosave(currentJobId);
 
   useEffect(() => {
     if (profile) {
@@ -65,15 +69,32 @@ const EstimatorPage: React.FC = () => {
     // still holds the last session's nodes/lines.
     reset();
 
+    // --- Step 1: peek at sessionStorage to learn the jobId (don't consume yet) ---
     const stored = sessionStorage.getItem('restore_quote');
+    let jobIdFromSession: string | null = null;
+    let canvasStateFromSession: any = null;
     if (stored) {
       try {
-        const { canvasState, jobId } = JSON.parse(stored);
-        if (canvasState) restoreCanvas(canvasState);
-        if (jobId) setSavedJobId(jobId);
+        const parsed = JSON.parse(stored);
+        jobIdFromSession = parsed.jobId ?? null;
+        canvasStateFromSession = parsed.canvasState ?? null;
+        if (parsed.jobId) setSavedJobId(parsed.jobId);
       } catch {}
       sessionStorage.removeItem('restore_quote');
     }
+
+    // --- Step 2: restore from localStorage draft (keyed by jobId) ---
+    if (jobIdFromSession) {
+      const localDraft = readLocalDraft(jobIdFromSession);
+      if (localDraft) restoreCanvas(localDraft);
+    }
+
+    // --- Step 3: sessionStorage quote restore overwrites local draft ---
+    // (Explicit quote edits always win over auto-draft.)
+    if (canvasStateFromSession) restoreCanvas(canvasStateFromSession);
+
+    // --- Step 4: activate autosave for this jobId ---
+    if (jobIdFromSession) setCurrentJobId(jobIdFromSession);
   }, []);
 
   const handleSaved = () => {
@@ -138,6 +159,14 @@ const EstimatorPage: React.FC = () => {
 
           {/* Right: action buttons */}
           <div className="flex items-center gap-1 sm:gap-2 flex-none">
+            {currentJobId && saveStatus !== 'idle' && (
+              <span
+                className="text-xs font-medium px-2 py-1 rounded transition-opacity"
+                style={{ color: saveStatus === 'saving' ? 'rgba(255,255,255,0.45)' : 'rgba(100,220,140,0.85)' }}
+              >
+                {saveStatus === 'saving' ? 'Saving…' : 'Saved'}
+              </span>
+            )}
             <button
               onClick={reset}
               className="flex items-center justify-center min-w-[40px] min-h-[40px] px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"

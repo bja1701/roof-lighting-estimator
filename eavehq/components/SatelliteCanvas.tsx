@@ -490,10 +490,10 @@ const SatelliteCanvas: React.FC = () => {
               onDragEnd={(e) => handleNodeDragEnd(e, node.id)}
               icon={{
                 path: (window as any).google?.maps?.SymbolPath?.CIRCLE || 0,
-                fillColor: activeDrawNodeId === node.id ? '#3a6349' : '#f7f3ea',
+                fillColor: activeDrawNodeId === node.id ? '#fb923c' : '#f97316',
                 fillOpacity: 1,
-                strokeColor: '#1f3d2c',
-                strokeWeight: 1,
+                strokeColor: '#7c2d12',
+                strokeWeight: 2,
                 // BUG 3 fix: scale 4 on touch (was 8) — precise without losing 36px tap target.
                 scale: isTouchDevice
                   ? 4
