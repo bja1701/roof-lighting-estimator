@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useEstimatorStore } from '../store/useEstimatorStore';
 import { useProfile } from '../hooks/useProfile';
-import { useCanvasAutosave, readLocalDraft } from '../hooks/useCanvasAutosave';
+import { useCanvasAutosave, readLocalDraft, readLastJobId } from '../hooks/useCanvasAutosave';
 import MapWrapper from '../components/MapWrapper';
 import SatelliteCanvas from '../components/SatelliteCanvas';
 import VisualPitchTool from '../components/VisualPitchTool';
@@ -66,6 +66,7 @@ const EstimatorPage: React.FC = () => {
   useEffect(() => {
     reset();
 
+    // 1. Check sessionStorage (set by JobDetailPage when navigating to estimator)
     const stored = sessionStorage.getItem('restore_quote');
     let jobIdFromSession: string | null = null;
     let canvasStateFromSession: any = null;
@@ -79,14 +80,18 @@ const EstimatorPage: React.FC = () => {
       sessionStorage.removeItem('restore_quote');
     }
 
-    // localStorage draft is the refresh-recovery fallback; session state overwrites it
-    if (jobIdFromSession) {
-      const localDraft = readLocalDraft(jobIdFromSession);
-      if (localDraft) restoreCanvas(localDraft);
-    }
+    // 2. On page refresh sessionStorage is gone — fall back to the last-used jobId
+    //    that the autosave hook wrote to localStorage.
+    //    If there's still no jobId (user opened /estimator directly), use 'anonymous'
+    //    so autosave still works for in-browser refresh recovery.
+    const resolvedJobId = jobIdFromSession ?? readLastJobId() ?? 'anonymous';
+
+    // 3. Restore: localStorage draft first (refresh recovery), session state wins
+    const localDraft = readLocalDraft(resolvedJobId);
+    if (localDraft) restoreCanvas(localDraft);
     if (canvasStateFromSession) restoreCanvas(canvasStateFromSession);
 
-    if (jobIdFromSession) setCurrentJobId(jobIdFromSession);
+    setCurrentJobId(resolvedJobId);
   }, []);
 
   const handleSaved = () => {

@@ -5,6 +5,9 @@ import { useEstimatorStore } from '../store/useEstimatorStore';
 export type SaveStatus = 'idle' | 'saving' | 'saved';
 
 const DEBOUNCE_MS = 1500;
+// Persists the last-used jobId across refreshes so the draft can be found
+// even after sessionStorage is cleared on first load.
+const LAST_JOB_KEY = 'estimator_last_job_id';
 
 function localKey(jobId: string) {
   return `canvas_draft_${jobId}`;
@@ -14,6 +17,7 @@ function buildSnapshot(state: ReturnType<typeof useEstimatorStore.getState>) {
   return {
     nodes: state.nodes,
     lines: state.lines,
+    savedPitches: state.savedPitches,
     pricePerFt: state.pricePerFt,
     controllerFee: state.controllerFee,
     includeController: state.includeController,
@@ -27,6 +31,15 @@ export function readLocalDraft(jobId: string): object | null {
     const raw = localStorage.getItem(localKey(jobId));
     if (!raw) return null;
     return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** Returns the jobId from the last autosave session — used for refresh recovery. */
+export function readLastJobId(): string | null {
+  try {
+    return localStorage.getItem(LAST_JOB_KEY);
   } catch {
     return null;
   }
@@ -53,20 +66,26 @@ export function useCanvasAutosave(jobId: string | null): SaveStatus {
 
       try {
         localStorage.setItem(localKey(jobId), JSON.stringify(snapshot));
+        // Record which job is active so a page refresh can find this draft
+        localStorage.setItem(LAST_JOB_KEY, jobId);
       } catch {}
 
       setStatus('saving');
 
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        try {
-          await supabase
-            .from('jobs')
-            .update({ canvas_draft: snapshot })
-            .eq('id', jobId);
-        } catch {}
+      if (jobId !== 'anonymous') {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(async () => {
+          try {
+            await supabase
+              .from('jobs')
+              .update({ canvas_draft: snapshot })
+              .eq('id', jobId);
+          } catch {}
+          setStatus('saved');
+        }, DEBOUNCE_MS);
+      } else {
         setStatus('saved');
-      }, DEBOUNCE_MS);
+      }
     });
 
     return () => {

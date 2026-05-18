@@ -203,6 +203,7 @@ export const useEstimatorStore = create<ExtendedEstimatorState>((set, get) => ({
     set({
       nodes: canvasState.nodes ?? [],
       lines: canvasState.lines ?? [],
+      savedPitches: canvasState.savedPitches ?? [],
       pricePerFt: canvasState.pricePerFt ?? get().pricePerFt,
       controllerFee: canvasState.controllerFee ?? get().controllerFee,
       includeController: canvasState.includeController ?? get().includeController,
