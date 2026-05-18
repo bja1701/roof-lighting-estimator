@@ -89,7 +89,7 @@ const EstimatorPage: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col h-screen w-screen overflow-hidden"
+      className="flex flex-col h-full w-full overflow-hidden"
       style={{ background: 'var(--color-primary-dark)', color: '#fff', fontFamily: 'var(--font-body)' }}
     >
       <MapWrapper>
@@ -173,7 +173,7 @@ const EstimatorPage: React.FC = () => {
             <div
               className={`order-1 group relative min-w-[300px] lg:flex-1 flex flex-col ${
                 mobileView === 'pitch' ? 'hidden lg:flex lg:flex-col' : ''
-              } h-[calc(100svh-3.5rem)] lg:h-auto`}
+              } h-full lg:h-auto`}
               style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
             >
               {/* Canvas fills remaining space */}
@@ -198,7 +198,7 @@ const EstimatorPage: React.FC = () => {
               ref={pitchPaneRef}
               className={`order-2 flex-[1.8] min-w-[300px] z-10 relative ${
                 mobileView === 'satellite' ? 'hidden lg:flex lg:flex-col' : ''
-              } h-[calc(100svh-3.5rem)] lg:h-full`}
+              } h-full lg:h-full`}
               style={{ boxShadow: '0 0 24px rgba(0,0,0,0.4)' }}
             >
               <VisualPitchTool />
