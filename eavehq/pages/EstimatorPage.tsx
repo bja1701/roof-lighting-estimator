@@ -33,6 +33,12 @@ const EstimatorPage: React.FC = () => {
 
   const saveStatus = useCanvasAutosave(currentJobId);
 
+  // Lock body scroll while the estimator canvas is mounted
+  useEffect(() => {
+    document.body.classList.add('estimator-active');
+    return () => document.body.classList.remove('estimator-active');
+  }, []);
+
   useEffect(() => {
     if (profile) {
       loadProfilePricing(profile.price_per_foot, profile.controller_fee, profile.include_controller);

@@ -42,46 +42,57 @@ export default function UpgradeModal() {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ background: 'rgba(31,61,44,0.75)' }}>
+    <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ background: 'rgba(26,26,26,0.5)' }}>
       <div className="w-full max-w-sm">
         <div
-          className="rounded-2xl overflow-hidden border border-white/8"
-          style={{ background: '#1e2d45', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: 'var(--color-card)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-modal)',
+            borderRadius: 'var(--radius-xl)',
+          }}
         >
-          {/* Amber top bar */}
-          <div style={{ height: 4, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)' }} />
+          {/* Forest green top bar */}
+          <div style={{ height: 4, background: 'var(--color-primary)' }} />
 
           <div className="p-7">
             {/* Title */}
-            <div className="mb-1.5 text-[15px] font-extrabold text-slate-200">
+            <div
+              className="mb-1.5 text-[15px] font-extrabold"
+              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+            >
               Upgrade to Pro
             </div>
-            <div className="text-[11px] text-slate-400 mb-5">
+            <div className="text-[11px] mb-5" style={{ color: 'var(--color-slate)' }}>
               You've used all 5 free estimates
             </div>
 
             {/* Price block */}
             <div
               className="rounded-[10px] p-4 mb-5 flex items-center justify-between"
-              style={{ background: '#0f1729', border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
             >
               <div>
-                <div className="text-[26px] font-extrabold text-white leading-none">
+                <div
+                  className="text-[26px] font-extrabold leading-none"
+                  style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-display)' }}
+                >
                   $89
-                  <span className="text-[13px] text-slate-400 font-normal"> /month</span>
+                  <span className="text-[13px] font-normal" style={{ color: 'var(--color-slate)' }}> /month</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">
+                <div className="text-[10px] mt-1" style={{ color: 'var(--color-slate)' }}>
                   Unlimited estimates · Cancel anytime
                 </div>
               </div>
-              <div className="text-[10px] text-amber-400 font-bold text-right leading-tight">
+              <div className="text-[10px] font-bold text-right leading-tight" style={{ color: 'var(--color-primary)' }}>
                 Everything<br />included
               </div>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="mb-4 text-[11px] text-red-400 bg-red-900/20 rounded-lg px-3 py-2">
+              <div className="mb-4 text-[11px] rounded-lg px-3 py-2" style={{ color: '#c94040', background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.15)' }}>
                 {error}
               </div>
             )}
@@ -90,21 +101,24 @@ export default function UpgradeModal() {
             <button
               onClick={handleGetStarted}
               disabled={loading}
-              className="w-full rounded-[10px] py-3 text-center text-[13px] font-bold mb-2.5 transition-opacity disabled:opacity-60"
-              style={{ background: '#f59e0b', color: '#0f1729' }}
+              className="w-full rounded-[10px] py-3 text-center text-[13px] font-bold mb-2.5 text-white transition-opacity disabled:opacity-60"
+              style={{ background: 'linear-gradient(90deg, var(--color-accent), #f08030)' }}
             >
               {loading ? 'Redirecting…' : 'Get started →'}
             </button>
 
-            {/* Dismiss — only if estimates remain */}
-            {hasRemainingEstimates && (
-              <button
-                onClick={close}
-                className="w-full text-center text-[11px] text-slate-500 hover:text-slate-400 transition-colors"
-              >
-                Not ready yet — use my remaining free estimates
-              </button>
-            )}
+            {/* Dismiss — always shown */}
+            <button
+              onClick={close}
+              className="w-full text-center text-[11px] transition-colors"
+              style={{ color: 'var(--color-slate)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-ink)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-slate)')}
+            >
+              {hasRemainingEstimates
+                ? 'Not ready yet — use my remaining free estimates'
+                : 'Not right now — dismiss'}
+            </button>
           </div>
         </div>
       </div>

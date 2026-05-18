@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, ChevronRight, Home, MapPin, Plus, Search, User, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Home, MapPin, Plus, Search, User, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SharedLayout from '../components/SharedLayout';
 import NewJobModal from '../components/NewJobModal';
@@ -13,7 +13,6 @@ import { Job, JobStatus } from '../types/job';
 // ─── Filter types ────────────────────────────────────────────────────────────
 
 type ListFilter = 'active' | 'completed' | 'archived';
-type DashboardTab = 'list' | 'schedule';
 
 const ACTIVE_STATUSES: JobStatus[] = ['estimate_sent', 'deposit_paid', 'scheduled', 'in_progress'];
 const COMPLETED_STATUSES: JobStatus[] = ['complete', 'final_paid'];
@@ -23,133 +22,6 @@ function filterJobs(jobs: Job[], filter: ListFilter): Job[] {
   if (filter === 'completed') return jobs.filter(j => COMPLETED_STATUSES.includes(j.status));
   // archived: no archived status yet — reserved bucket, show empty
   return [];
-}
-
-// ─── Weekly calendar helpers ─────────────────────────────────────────────────
-
-function getWeekDates(anchor: Date): Date[] {
-  const start = new Date(anchor);
-  const day = start.getDay(); // 0=Sun
-  start.setDate(start.getDate() - day);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-}
-
-function WeeklyCalendar({ jobs, onJobClick }: { jobs: Job[]; onJobClick: (id: string) => void }) {
-  const [anchor, setAnchor] = useState(new Date());
-  const weekDates = getWeekDates(anchor);
-
-  const prevWeek = () => {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() - 7);
-    setAnchor(d);
-  };
-  const nextWeek = () => {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() + 7);
-    setAnchor(d);
-  };
-
-  const jobsForDay = (date: Date): Job[] =>
-    jobs.filter(j => {
-      if (!j.scheduled_date) return false;
-      const jd = new Date(j.scheduled_date + 'T00:00:00');
-      return isSameDay(jd, date);
-    });
-
-  const today = new Date();
-  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  const weekLabel = `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-  return (
-    <div>
-      {/* Week nav */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={prevWeek}
-          className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
-          style={{ color: 'var(--color-slate)' }}
-          aria-label="Previous week"
-        >
-          <ChevronLeft size={20} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
-        </button>
-        <span className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>{weekLabel}</span>
-        <button
-          type="button"
-          onClick={nextWeek}
-          className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
-          style={{ color: 'var(--color-slate)' }}
-          aria-label="Next week"
-        >
-          <ChevronRight size={20} aria-hidden="true" style={{ color: 'var(--color-slate)' }} />
-        </button>
-      </div>
-
-      {/* Day columns */}
-      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-        {weekDates.map((date, i) => {
-          const isToday = isSameDay(date, today);
-          const dayJobs = jobsForDay(date);
-          return (
-            <div key={i} className="flex flex-col min-h-[120px]">
-              {/* Day header */}
-              <div
-                className="text-center mb-1 rounded-lg py-1"
-                style={isToday ? { background: 'var(--color-primary)', color: '#fff' } : undefined}
-              >
-                <p
-                  className="text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: isToday ? '#fff' : 'var(--color-slate)' }}
-                >
-                  {DAY_NAMES[i]}
-                </p>
-                <p className="text-sm font-bold" style={{ color: isToday ? '#fff' : 'var(--color-ink)' }}>
-                  {date.getDate()}
-                </p>
-              </div>
-              {/* Jobs */}
-              <div className="flex flex-col gap-1 flex-1">
-                {dayJobs.map(job => (
-                  <button
-                    key={job.id}
-                    type="button"
-                    onClick={() => onJobClick(job.id)}
-                    className="w-full text-left rounded-md px-1.5 py-1 text-[10px] sm:text-xs font-medium transition-colors min-h-[44px] flex flex-col justify-center"
-                    style={{
-                      background: 'rgba(58,99,73,0.1)',
-                      border: '1px solid rgba(58,99,73,0.18)',
-                      color: 'var(--color-ink)',
-                    }}
-                    title={job.name}
-                  >
-                    <span className="block truncate">{job.name}</span>
-                    {job.status !== 'estimate_sent' && <JobStatusBadge status={job.status} size="sm" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {jobs.filter(j => j.scheduled_date).length === 0 && (
-        <p className="text-center text-sm mt-8" style={{ color: 'var(--color-slate)' }}>
-          No jobs with a scheduled date yet. Open a job and set a scheduled date to see it here.
-        </p>
-      )}
-    </div>
-  );
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
@@ -164,7 +36,6 @@ export default function DashboardPage() {
   const [showNewJob, setShowNewJob] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ListFilter>('active');
-  const [tab, setTab] = useState<DashboardTab>('list');
   const [estimateLimitBanner, setEstimateLimitBanner] = useState(false);
 
   const fetchJobs = useCallback(async () => {
@@ -279,27 +150,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: 'var(--color-surface)' }}>
-          {(['list', 'schedule'] as DashboardTab[]).map(t => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className="px-5 py-2 rounded-lg text-sm font-semibold transition-all min-h-[40px] capitalize"
-              style={{
-                background: tab === t ? 'var(--color-card)' : 'transparent',
-                boxShadow: tab === t ? 'var(--shadow-card)' : 'none',
-                color: tab === t ? 'var(--color-ink)' : 'var(--color-slate)',
-              }}
-            >
-              {t === 'list' ? 'List' : 'Schedule'}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'list' ? (
-          <>
+        <>
             {/* Filter + Search */}
             <div className="mb-5 flex flex-col sm:flex-row gap-3">
               <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--color-surface)' }}>
@@ -488,19 +339,6 @@ export default function DashboardPage() {
               </div>
             )}
           </>
-        ) : (
-          /* Schedule tab */
-          <div
-            className="rounded-xl p-4 overflow-x-auto"
-            style={{
-              background: 'var(--color-card)',
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-            }}
-          >
-            <WeeklyCalendar jobs={jobs} onJobClick={id => navigate(`/jobs/${id}`)} />
-          </div>
-        )}
       </div>
 
       {showNewJob && (
