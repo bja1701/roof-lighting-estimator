@@ -1,10 +1,8 @@
 name: Codex Review
 
 on:
-  push:
-    branches:
-      - dev
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - dev
       - master
@@ -19,10 +17,19 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+
+      - name: Ensure labels exist
+        run: |
+          gh label create "needs-codex-fix" --color "e11d48" --description "Codex found BLOCKING issues" 2>/dev/null || true
+          gh label create "codex-approved" --color "16a34a" --description "Codex clean pass" 2>/dev/null || true
+          for i in 1 2 3; do
+            gh label create "fix-round-$i" --color "f59e0b" --description "Auto-fix attempt $i" 2>/dev/null || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Codex Review
         uses: anthropics/claude-code-action@v1
@@ -32,16 +39,23 @@ jobs:
             You are the adversarial code reviewer defined in eavehq/AGENTS.md.
             Cross-reference every finding against eavehq/best_practices.md.
 
-            Steps:
-            1. Run `git diff HEAD~1 HEAD -- eavehq/` to get the diff for this push.
-               If this is a pull_request event, run `git diff origin/${{ github.base_ref }}...HEAD -- eavehq/` instead.
-            2. Read `eavehq/AGENTS.md` for your full mandate and output format.
-            3. Read `eavehq/best_practices.md` for the blocking rules.
-            4. Write your review following the format in AGENTS.md exactly.
-            5. Post the review as a commit comment:
-               gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
-                 --method POST \
-                 -f body="$(cat review.md)"
-               Save the review to review.md first, then post it.
+            PR number: ${{ github.event.pull_request.number }}
+            Repo: ${{ github.repository }}
 
-            If there are zero findings, post a single-line commit comment: "Codex: clean pass."
+            Steps:
+            1. Get the PR diff: gh pr diff ${{ github.event.pull_request.number }}
+            2. Read eavehq/AGENTS.md for your mandate and output format.
+            3. Read eavehq/best_practices.md for blocking rules.
+            4. Write your review per the AGENTS.md format. Save it to /tmp/review.md
+            5. Post the review as a PR comment:
+               gh pr comment ${{ github.event.pull_request.number }} --body "$(cat /tmp/review.md)"
+            6. Check if /tmp/review.md contains the text "### BLOCKING":
+               - If YES (blocking issues found):
+                 gh pr edit ${{ github.event.pull_request.number }} --remove-label "codex-approved" 2>/dev/null || true
+                 gh pr edit ${{ github.event.pull_request.number }} --add-label "needs-codex-fix"
+               - If NO (clean pass):
+                 gh pr edit ${{ github.event.pull_request.number }} --remove-label "needs-codex-fix" 2>/dev/null || true
+                 gh pr edit ${{ github.event.pull_request.number }} --add-label "codex-approved"
+                 gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch --admin
+
+            If there are zero findings, your review comment should be a single line: "Codex: clean pass."

@@ -1,0 +1,75 @@
+name: Auto Fix
+
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - dev
+
+jobs:
+  auto-fix:
+    if: github.event.label.name == 'needs-codex-fix'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check fix round and enforce 3-round limit
+        id: gate
+        run: |
+          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels -q '.labels[].name')
+
+          # Remove the trigger label immediately to avoid re-triggering on label add below
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "needs-codex-fix"
+
+          if echo "$LABELS" | grep -q "fix-round-2"; then
+            ROUND=3
+          elif echo "$LABELS" | grep -q "fix-round-1"; then
+            ROUND=2
+          else
+            ROUND=1
+          fi
+
+          echo "round=$ROUND" >> "$GITHUB_OUTPUT"
+
+          if [ "$ROUND" -ge 3 ]; then
+            gh pr comment ${{ github.event.pull_request.number }} --body "**Auto-Fix Limit Reached** — 3 rounds attempted without a clean Codex pass. @bja1701 this needs your eyes."
+            echo "stop=true" >> "$GITHUB_OUTPUT"
+          else
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "fix-round-$ROUND"
+            echo "stop=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-fix BLOCKING issues
+        if: steps.gate.outputs.stop == 'false'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are an autonomous developer fixing BLOCKING issues flagged by a Codex code review.
+            Fix round: ${{ steps.gate.outputs.round }} of 3.
+
+            PR: ${{ github.repository }}#${{ github.event.pull_request.number }}
+            Branch: ${{ github.head_ref }}
+
+            Steps:
+            1. Read the latest Codex review comment on this PR:
+               gh pr view ${{ github.event.pull_request.number }} --comments --json comments \
+                 -q '.comments | map(select(.body | contains("## Codex Review"))) | last | .body'
+            2. Read eavehq/AGENTS.md and eavehq/best_practices.md to understand the rules.
+            3. For each item under "### BLOCKING" in the review, locate the file and line referenced and fix it.
+            4. Do NOT touch anything outside the BLOCKING items. Do not refactor, rename, or expand scope.
+            5. After all fixes: git add -A && git commit -m "fix: Codex BLOCKING issues round ${{ steps.gate.outputs.round }}" && git push
+            6. If you cannot confidently fix a BLOCKING issue (ambiguous, requires architectural decision), skip it and post a comment:
+               gh pr comment ${{ github.event.pull_request.number }} --body "Auto-fix round ${{ steps.gate.outputs.round }}: skipped [file:line] — needs human judgment: [reason]"
